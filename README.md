@@ -413,15 +413,18 @@ After:   290 KB allocated (string only + pooled buffers)
 
 ## 🧪 Tests
 
-**74 tests** · xUnit · All passing ✅
+**141 tests** · xUnit · All passing ✅ · **99.86% line coverage** · **97.84% branch coverage**
 
 | Suite | Tests | Coverage |
 |-------|-------|----------|
-| `PdfCanvasTests` | 16 | Lines, rectangles, text, grid, tables, barcode, alignment |
+| `PdfCanvasTests` | 25 | Lines, rectangles, text, grid, tables, barcode, alignment, image validation, edge cases |
 | `Code39Tests` | 9 | Generation, validation, invalid chars, gaps, case |
 | `EAN13Tests` | 12 | 12/13 digits, check digit, hyphens, spaces, guards |
-| `PdfDocumentTests` | 10 | AddPage, AddImage, Save, multiple pages, dispose |
-| `NFeParserTests` | 11 | Full parse, missing fields, error validation |
+| `Code128Tests` | 13 | Code128C generation, check digit, bar pattern, input validation |
+| `PdfDocumentTests` | 18 | AddPage, AddImage, Save, multiple pages, JPEG parsing, dispose |
+| `PdfConstantsTests` | 12 | `IsValidPdfName` with null/empty, valid names, invalid chars |
+| `NFeParserTests` | 19 | Full parse, missing fields, protocol, adicional, transport, volumes |
+| `NFeRendererTests` | 5 | RenderToFile, null validation, PDF structure |
 
 ```bash
 dotnet test
@@ -433,7 +436,9 @@ dotnet test
 - **EAN-13 check digit**: Cross-validation of check digit calculation with 13 provided digits
 - **Grid with invalid dimensions**: Ensures `DrawGrid` with 0 columns/rows draws nothing
 - **Save with image**: Verifies the saved PDF is valid with all expected components
+- **PDF injection prevention**: Validates image names are rejected when containing dangerous characters
 - **Parse XML with missing fields**: Parser resilience when XML lacks expected nodes
+- **Code128C barcode**: Validates check digit, bar alternation, and digit filtering from mixed input
 
 ---
 
@@ -527,13 +532,16 @@ PdfDocument/
 │   ├── Playground.csproj
 │   └── Program.cs                            #   6 complete demos
 │
-├── tests/PdfDocument.Tests/                  # 🧪 Unit tests (74) (IsPackable=false)
+├── tests/PdfDocument.Tests/                  # 🧪 Unit tests (141) (IsPackable=false)
 │   ├── PdfDocument.Tests.csproj              #   xUnit + coverlet
-│   ├── PdfCanvasTests.cs                     #   16 tests
+│   ├── PdfCanvasTests.cs                     #   25 tests
 │   ├── Code39Tests.cs                        #   9 tests
 │   ├── EAN13Tests.cs                         #   12 tests
-│   ├── PdfDocumentTests.cs                   #   10 tests
-│   └── NFeParserTests.cs                     #   11 tests
+│   ├── Code128Tests.cs                       #   13 tests
+│   ├── PdfDocumentTests.cs                   #   18 tests
+│   ├── PdfConstantsTests.cs                  #   12 tests
+│   ├── NFeParserTests.cs                     #   19 tests
+│   ├── NFeRendererTests.cs                   #   5 tests
 │
 └── benchmarks/PdfDocument.Benchmarks/        # ⚡ Performance benchmarks (IsPackable=false)
     ├── PdfDocument.Benchmarks.csproj         #   BenchmarkDotNet 0.14.0
@@ -556,7 +564,7 @@ PdfDocument/
 - [x] JPEG image insertion
 - [x] NFe XML parser (4.00)
 - [x] DANFE rendering
-- [x] Unit tests (74)
+- [x] Unit tests (141) — 99.86% line coverage
 - [x] Performance benchmarks
 - [x] Official DANFE layout with logo
 - [x] NuGet packaging (v1.0.0)

@@ -38,121 +38,152 @@ public static class NFeParser
                 "Could not find infNFe node in XML. Verify the XML is a valid NFe.");
 
         XElement? prot = doc.Descendants(Ns + "prot").FirstOrDefault();
+        XElement? ide = infNFe.Element(Ns + "ide");
+        XElement? emit = infNFe.Element(Ns + "emit");
+        XElement? dest = infNFe.Element(Ns + "dest");
+        XElement? det = infNFe.Element(Ns + "det");
+        XElement? total = infNFe.Element(Ns + "total");
+        XElement? transp = infNFe.Element(Ns + "transp");
+        XElement? pag = infNFe.Element(Ns + "pag");
+        XElement? infAdic = infNFe.Element(Ns + "infAdic");
 
         return new NFeData
         {
             // ── Identification ─────────────────────────────────────────
-            CUf = (string?)infNFe.Element(Ns + "ide")?.Element(Ns + "cUF") ?? "",
-            NatOp = (string?)infNFe.Element(Ns + "ide")?.Element(Ns + "natOp") ?? "",
-            Mod = (string?)infNFe.Element(Ns + "ide")?.Element(Ns + "mod") ?? "",
-            Serie = (string?)infNFe.Element(Ns + "ide")?.Element(Ns + "serie") ?? "",
-            Nnf = (string?)infNFe.Element(Ns + "ide")?.Element(Ns + "nNF") ?? "",
-            DhEmi = (string?)infNFe.Element(Ns + "ide")?.Element(Ns + "dhEmi") ?? "",
-            DhSaiEnt = (string?)infNFe.Element(Ns + "ide")?.Element(Ns + "dhSaiEnt") ?? "",
-            TpNf = (string?)infNFe.Element(Ns + "ide")?.Element(Ns + "tpNF") ?? "",
-            IdDest = (string?)infNFe.Element(Ns + "ide")?.Element(Ns + "idDest") ?? "",
-            CMunFg = (string?)infNFe.Element(Ns + "ide")?.Element(Ns + "cMunFG") ?? "",
-            TpAmb = (string?)infNFe.Element(Ns + "ide")?.Element(Ns + "tpAmb") ?? "",
-            FinNfe = (string?)infNFe.Element(Ns + "ide")?.Element(Ns + "finNFe") ?? "",
-            IndFinal = (string?)infNFe.Element(Ns + "ide")?.Element(Ns + "indFinal") ?? "",
-            IndPres = (string?)infNFe.Element(Ns + "ide")?.Element(Ns + "indPres") ?? "",
+            CUf = Field(ide, "cUF"),
+            NatOp = Field(ide, "natOp"),
+            Mod = Field(ide, "mod"),
+            Serie = Field(ide, "serie"),
+            Nnf = Field(ide, "nNF"),
+            DhEmi = Field(ide, "dhEmi"),
+            DhSaiEnt = Field(ide, "dhSaiEnt"),
+            TpNf = Field(ide, "tpNF"),
+            IdDest = Field(ide, "idDest"),
+            CMunFg = Field(ide, "cMunFG"),
+            TpAmb = Field(ide, "tpAmb"),
+            FinNfe = Field(ide, "finNFe"),
+            IndFinal = Field(ide, "indFinal"),
+            IndPres = Field(ide, "indPres"),
 
             // ── Protocol ───────────────────────────────────────────────
-            NProt = (string?)prot?.Element(Ns + "infProt")?.Element(Ns + "nProt") ?? "",
-            DhAutor = (string?)prot?.Element(Ns + "infProt")?.Element(Ns + "dhRecbto") ?? "",
+            NProt = SubField(prot, "infProt", "nProt"),
+            DhAutor = SubField(prot, "infProt", "dhRecbto"),
 
             // ── Issuer ─────────────────────────────────────────────────
-            EmitCnpj = (string?)infNFe.Element(Ns + "emit")?.Element(Ns + "CNPJ") ?? "",
-            EmitXNome = (string?)infNFe.Element(Ns + "emit")?.Element(Ns + "xNome") ?? "",
-            EmitXFant = (string?)infNFe.Element(Ns + "emit")?.Element(Ns + "xFant") ?? "",
-            EmitIe = (string?)infNFe.Element(Ns + "emit")?.Element(Ns + "IE") ?? "",
-            EmitIeSt = (string?)infNFe.Element(Ns + "emit")?.Element(Ns + "IEST") ?? "",
-            EmitCrt = (string?)infNFe.Element(Ns + "emit")?.Element(Ns + "CRT") ?? "",
-            EmitXLogr = (string?)infNFe.Element(Ns + "emit")?.Element(Ns + "enderEmit")?.Element(Ns + "xLgr") ?? "",
-            EmitNro = (string?)infNFe.Element(Ns + "emit")?.Element(Ns + "enderEmit")?.Element(Ns + "nro") ?? "",
-            EmitXBairro = (string?)infNFe.Element(Ns + "emit")?.Element(Ns + "enderEmit")?.Element(Ns + "xBairro") ?? "",
-            EmitCMun = (string?)infNFe.Element(Ns + "emit")?.Element(Ns + "enderEmit")?.Element(Ns + "cMun") ?? "",
-            EmitXMun = (string?)infNFe.Element(Ns + "emit")?.Element(Ns + "enderEmit")?.Element(Ns + "xMun") ?? "",
-            EmitUf = (string?)infNFe.Element(Ns + "emit")?.Element(Ns + "enderEmit")?.Element(Ns + "UF") ?? "",
-            EmitCep = (string?)infNFe.Element(Ns + "emit")?.Element(Ns + "enderEmit")?.Element(Ns + "CEP") ?? "",
+            EmitCnpj = Field(emit, "CNPJ"),
+            EmitXNome = Field(emit, "xNome"),
+            EmitXFant = Field(emit, "xFant"),
+            EmitIe = Field(emit, "IE"),
+            EmitIeSt = Field(emit, "IEST"),
+            EmitCrt = Field(emit, "CRT"),
+            EmitXLogr = SubField(emit, "enderEmit", "xLgr"),
+            EmitNro = SubField(emit, "enderEmit", "nro"),
+            EmitXBairro = SubField(emit, "enderEmit", "xBairro"),
+            EmitCMun = SubField(emit, "enderEmit", "cMun"),
+            EmitXMun = SubField(emit, "enderEmit", "xMun"),
+            EmitUf = SubField(emit, "enderEmit", "UF"),
+            EmitCep = SubField(emit, "enderEmit", "CEP"),
 
             // ── Recipient ──────────────────────────────────────────────
-            DestCnpj = (string?)infNFe.Element(Ns + "dest")?.Element(Ns + "CNPJ") ?? "",
-            DestXNome = (string?)infNFe.Element(Ns + "dest")?.Element(Ns + "xNome") ?? "",
-            DestXLogr = (string?)infNFe.Element(Ns + "dest")?.Element(Ns + "enderDest")?.Element(Ns + "xLgr") ?? "",
-            DestNro = (string?)infNFe.Element(Ns + "dest")?.Element(Ns + "enderDest")?.Element(Ns + "nro") ?? "",
-            DestXBairro = (string?)infNFe.Element(Ns + "dest")?.Element(Ns + "enderDest")?.Element(Ns + "xBairro") ?? "",
-            DestCMun = (string?)infNFe.Element(Ns + "dest")?.Element(Ns + "enderDest")?.Element(Ns + "cMun") ?? "",
-            DestXMun = (string?)infNFe.Element(Ns + "dest")?.Element(Ns + "enderDest")?.Element(Ns + "xMun") ?? "",
-            DestUf = (string?)infNFe.Element(Ns + "dest")?.Element(Ns + "enderDest")?.Element(Ns + "UF") ?? "",
-            DestIe = (string?)infNFe.Element(Ns + "dest")?.Element(Ns + "IE") ?? "",
-            DestFone = (string?)infNFe.Element(Ns + "dest")?.Element(Ns + "enderDest")?.Element(Ns + "fone") ?? "",
+            DestCnpj = Field(dest, "CNPJ"),
+            DestXNome = Field(dest, "xNome"),
+            DestXLogr = SubField(dest, "enderDest", "xLgr"),
+            DestNro = SubField(dest, "enderDest", "nro"),
+            DestXBairro = SubField(dest, "enderDest", "xBairro"),
+            DestCMun = SubField(dest, "enderDest", "cMun"),
+            DestXMun = SubField(dest, "enderDest", "xMun"),
+            DestUf = SubField(dest, "enderDest", "UF"),
+            DestIe = Field(dest, "IE"),
+            DestFone = SubField(dest, "enderDest", "fone"),
 
             // ── Product (first item) ───────────────────────────────────
-            CProd = (string?)infNFe.Element(Ns + "det")?.Element(Ns + "prod")?.Element(Ns + "cProd") ?? "",
-            XProd = (string?)infNFe.Element(Ns + "det")?.Element(Ns + "prod")?.Element(Ns + "xProd") ?? "",
-            Ncm = (string?)infNFe.Element(Ns + "det")?.Element(Ns + "prod")?.Element(Ns + "NCM") ?? "",
-            Cst = (string?)infNFe.Element(Ns + "det")?.Element(Ns + "imposto")?
-                      .Element(Ns + "ICMS")?.Element(Ns + "CST")
-                  ?? (string?)infNFe.Element(Ns + "det")?.Element(Ns + "imposto")?
-                      .Element(Ns + "IPI")?.Element(Ns + "CST") ?? "",
-            Cfop = (string?)infNFe.Element(Ns + "det")?.Element(Ns + "prod")?.Element(Ns + "CFOP") ?? "",
-            UCom = (string?)infNFe.Element(Ns + "det")?.Element(Ns + "prod")?.Element(Ns + "uCom") ?? "",
-            QCom = (string?)infNFe.Element(Ns + "det")?.Element(Ns + "prod")?.Element(Ns + "qCom") ?? "",
-            VUnCom = (string?)infNFe.Element(Ns + "det")?.Element(Ns + "prod")?.Element(Ns + "vUnCom") ?? "",
-            VProd = (string?)infNFe.Element(Ns + "det")?.Element(Ns + "prod")?.Element(Ns + "vProd") ?? "",
-            VProdDesc = (string?)infNFe.Element(Ns + "det")?.Element(Ns + "prod")?.Element(Ns + "vDesc") ?? "",
-            VBcProd = (string?)infNFe.Element(Ns + "det")?.Element(Ns + "imposto")?
-                          .Element(Ns + "ICMS")?.Element(Ns + "vBC") ?? "",
-            VIcmsProd = (string?)infNFe.Element(Ns + "det")?.Element(Ns + "imposto")?
-                            .Element(Ns + "ICMS")?.Element(Ns + "vICMS") ?? "",
-            VIpiProd = (string?)infNFe.Element(Ns + "det")?.Element(Ns + "imposto")?
-                           .Element(Ns + "IPI")?.Element(Ns + "vIPI") ?? "",
-            PIcms = (string?)infNFe.Element(Ns + "det")?.Element(Ns + "imposto")?
-                        .Element(Ns + "ICMS")?.Element(Ns + "pICMS") ?? "",
-            PIpi = (string?)infNFe.Element(Ns + "det")?.Element(Ns + "imposto")?
-                       .Element(Ns + "IPI")?.Element(Ns + "pIPI") ?? "",
+            CProd = SubField(det, "prod", "cProd"),
+            XProd = SubField(det, "prod", "xProd"),
+            Ncm = SubField(det, "prod", "NCM"),
+            Cst = ParseCst(det),
+            Cfop = SubField(det, "prod", "CFOP"),
+            UCom = SubField(det, "prod", "uCom"),
+            QCom = SubField(det, "prod", "qCom"),
+            VUnCom = SubField(det, "prod", "vUnCom"),
+            VProd = SubField(det, "prod", "vProd"),
+            VProdDesc = SubField(det, "prod", "vDesc"),
+            VBcProd = SubSubField(det, "imposto", "ICMS", "vBC"),
+            VIcmsProd = SubSubField(det, "imposto", "ICMS", "vICMS"),
+            VIpiProd = SubSubField(det, "imposto", "IPI", "vIPI"),
+            PIcms = SubSubField(det, "imposto", "ICMS", "pICMS"),
+            PIpi = SubSubField(det, "imposto", "IPI", "pIPI"),
 
             // ── Totals ──────────────────────────────────────────────────
-            VBc = (string?)infNFe.Element(Ns + "total")?.Element(Ns + "ICMSTot")?.Element(Ns + "vBC") ?? "",
-            VIcms = (string?)infNFe.Element(Ns + "total")?.Element(Ns + "ICMSTot")?.Element(Ns + "vICMS") ?? "",
-            VBcSt = (string?)infNFe.Element(Ns + "total")?.Element(Ns + "ICMSTot")?.Element(Ns + "vBCST") ?? "",
-            VSt = (string?)infNFe.Element(Ns + "total")?.Element(Ns + "ICMSTot")?.Element(Ns + "vST") ?? "",
-            VProdTotal = (string?)infNFe.Element(Ns + "total")?.Element(Ns + "ICMSTot")?.Element(Ns + "vProd") ?? "",
-            VFrete = (string?)infNFe.Element(Ns + "total")?.Element(Ns + "ICMSTot")?.Element(Ns + "vFrete") ?? "",
-            VSeg = (string?)infNFe.Element(Ns + "total")?.Element(Ns + "ICMSTot")?.Element(Ns + "vSeg") ?? "",
-            VDesc = (string?)infNFe.Element(Ns + "total")?.Element(Ns + "ICMSTot")?.Element(Ns + "vDesc") ?? "",
-            VOutro = (string?)infNFe.Element(Ns + "total")?.Element(Ns + "ICMSTot")?.Element(Ns + "vOutro") ?? "",
-            VIpi = (string?)infNFe.Element(Ns + "total")?.Element(Ns + "ICMSTot")?.Element(Ns + "vIPI") ?? "",
-            VNf = (string?)infNFe.Element(Ns + "total")?.Element(Ns + "ICMSTot")?.Element(Ns + "vNF") ?? "",
-            VAproxTrib = (string?)infNFe.Element(Ns + "total")?.Element(Ns + "ICMSTot")?.Element(Ns + "vTotTrib") ?? "",
+            VBc = SubField(total, "ICMSTot", "vBC"),
+            VIcms = SubField(total, "ICMSTot", "vICMS"),
+            VBcSt = SubField(total, "ICMSTot", "vBCST"),
+            VSt = SubField(total, "ICMSTot", "vST"),
+            VProdTotal = SubField(total, "ICMSTot", "vProd"),
+            VFrete = SubField(total, "ICMSTot", "vFrete"),
+            VSeg = SubField(total, "ICMSTot", "vSeg"),
+            VDesc = SubField(total, "ICMSTot", "vDesc"),
+            VOutro = SubField(total, "ICMSTot", "vOutro"),
+            VIpi = SubField(total, "ICMSTot", "vIPI"),
+            VNf = SubField(total, "ICMSTot", "vNF"),
+            VAproxTrib = SubField(total, "ICMSTot", "vTotTrib"),
 
             // ── Carrier ─────────────────────────────────────────────────
-            TransCnpj = (string?)infNFe.Element(Ns + "transp")?.Element(Ns + "transporta")?.Element(Ns + "CNPJ") ?? "",
-            TransXNome = (string?)infNFe.Element(Ns + "transp")?.Element(Ns + "transporta")?.Element(Ns + "xNome") ?? "",
-            TransIe = (string?)infNFe.Element(Ns + "transp")?.Element(Ns + "transporta")?.Element(Ns + "IE") ?? "",
-            TransXEnder = (string?)infNFe.Element(Ns + "transp")?.Element(Ns + "transporta")?.Element(Ns + "xEnder") ?? "",
-            TransXMun = (string?)infNFe.Element(Ns + "transp")?.Element(Ns + "transporta")?.Element(Ns + "xMun") ?? "",
-            TransUf = (string?)infNFe.Element(Ns + "transp")?.Element(Ns + "transporta")?.Element(Ns + "UF") ?? "",
-            ModFrete = (string?)infNFe.Element(Ns + "transp")?.Element(Ns + "modFrete") ?? "",
-            TransPlaca = (string?)infNFe.Element(Ns + "transp")?.Element(Ns + "veicTransp")?.Element(Ns + "placa") ?? "",
-            TransUFVeic = (string?)infNFe.Element(Ns + "transp")?.Element(Ns + "veicTransp")?.Element(Ns + "UF") ?? "",
-            TransAntt = (string?)infNFe.Element(Ns + "transp")?.Element(Ns + "reboque")?.Element(Ns + "RNTC")
-                     ?? (string?)infNFe.Element(Ns + "transp")?.Element(Ns + "veicTransp")?.Element(Ns + "RNTC") ?? "",
-            TransQVol = (string?)infNFe.Element(Ns + "transp")?.Element(Ns + "vol")?.Element(Ns + "qVol") ?? "",
-            TransEspecie = (string?)infNFe.Element(Ns + "transp")?.Element(Ns + "vol")?.Element(Ns + "esp") ?? "",
-            TransMarca = (string?)infNFe.Element(Ns + "transp")?.Element(Ns + "vol")?.Element(Ns + "marca") ?? "",
-            TransNumVol = (string?)infNFe.Element(Ns + "transp")?.Element(Ns + "vol")?.Element(Ns + "nVol") ?? "",
-            TransPesoB = (string?)infNFe.Element(Ns + "transp")?.Element(Ns + "vol")?.Element(Ns + "pesoB") ?? "",
-            TransPesoL = (string?)infNFe.Element(Ns + "transp")?.Element(Ns + "vol")?.Element(Ns + "pesoL") ?? "",
+            TransCnpj = SubField(transp, "transporta", "CNPJ"),
+            TransXNome = SubField(transp, "transporta", "xNome"),
+            TransIe = SubField(transp, "transporta", "IE"),
+            TransXEnder = SubField(transp, "transporta", "xEnder"),
+            TransXMun = SubField(transp, "transporta", "xMun"),
+            TransUf = SubField(transp, "transporta", "UF"),
+            ModFrete = Field(transp, "modFrete"),
+            TransPlaca = SubField(transp, "veicTransp", "placa"),
+            TransUFVeic = SubField(transp, "veicTransp", "UF"),
+            TransAntt = SubFieldOrNull(transp, "reboque", "RNTC")
+                     ?? SubField(transp, "veicTransp", "RNTC"),
+            TransQVol = SubField(transp, "vol", "qVol"),
+            TransEspecie = SubField(transp, "vol", "esp"),
+            TransMarca = SubField(transp, "vol", "marca"),
+            TransNumVol = SubField(transp, "vol", "nVol"),
+            TransPesoB = SubField(transp, "vol", "pesoB"),
+            TransPesoL = SubField(transp, "vol", "pesoL"),
 
             // ── Payment ─────────────────────────────────────────────────
-            TPag = (string?)infNFe.Element(Ns + "pag")?.Element(Ns + "detPag")?.Element(Ns + "tPag") ?? "",
-            VPag = (string?)infNFe.Element(Ns + "pag")?.Element(Ns + "detPag")?.Element(Ns + "vPag") ?? "",
+            TPag = SubField(pag, "detPag", "tPag"),
+            VPag = SubField(pag, "detPag", "vPag"),
 
             // ── Additional Info ─────────────────────────────────────────
-            InfCpl = (string?)infNFe.Element(Ns + "infAdic")?.Element(Ns + "infCpl") ?? "",
-            InfAdic = (string?)infNFe.Element(Ns + "infAdic")?.Element(Ns + "infAdFisco") ?? "",
+            InfCpl = SubField(infAdic, "infCpl"),
+            InfAdic = SubField(infAdic, "infAdFisco"),
         };
+    }
+
+    /// <summary>Reads a child field value from a parent element, or empty string.</summary>
+    private static string Field(XElement? parent, string child)
+        => (string?)parent?.Element(Ns + child) ?? "";
+
+    /// <summary>Reads a nested field: parent → middle → child.</summary>
+    private static string SubField(XElement? parent, string middle, string child)
+        => (string?)parent?.Element(Ns + middle)?.Element(Ns + child) ?? "";
+
+    /// <summary>Reads a nested field returning null instead of empty string.</summary>
+    private static string? SubFieldOrNull(XElement? parent, string middle, string child)
+        => (string?)parent?.Element(Ns + middle)?.Element(Ns + child);
+
+    /// <summary>Reads a deeply nested field: parent → m1 → m2 → child.</summary>
+    private static string SubSubField(XElement? parent, string m1, string m2, string child)
+        => (string?)parent?.Element(Ns + m1)?.Element(Ns + m2)?.Element(Ns + child) ?? "";
+
+    /// <summary>Reads a single-level subfield (middle is optional).</summary>
+    private static string SubField(XElement? parent, string child)
+        => (string?)parent?.Element(Ns + child) ?? "";
+
+    /// <summary>Parses CST from ICMS or IPI.</summary>
+    private static string ParseCst(XElement? det)
+    {
+        if (det == null) return "";
+        var imposto = det.Element(Ns + "imposto");
+        if (imposto == null) return "";
+        return (string?)imposto.Element(Ns + "ICMS")?.Element(Ns + "CST")
+            ?? (string?)imposto.Element(Ns + "IPI")?.Element(Ns + "CST")
+            ?? "";
     }
 }

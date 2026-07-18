@@ -202,6 +202,148 @@ public sealed class PdfDocumentTests
         pdf.Dispose(); // Should not throw
     }
 
+    [Fact]
+    public void AddImage_FromFile_ShouldRegisterImage()
+    {
+        // Arrange
+        using var pdf = new PdfBuilder();
+        string tempJpeg = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllBytes(tempJpeg, CreateMinimalJpeg());
+
+            // Act
+            pdf.AddImage("fromfile", tempJpeg);
+
+            // Assert - use Save with image to verify it works
+            string tempPdf = Path.GetTempFileName();
+            try
+            {
+                var page = pdf.AddPage();
+                page.Canvas.DrawImage("fromfile", 0, 0, 100, 50);
+                pdf.Save(tempPdf);
+                string content = File.ReadAllText(tempPdf);
+                Assert.Contains("fromfile", content);
+            }
+            finally { File.Delete(tempPdf); }
+        }
+        finally { File.Delete(tempJpeg); }
+    }
+
+    [Fact]
+    public void AddImage_FromFile_ShouldThrow_WhenFileNotFound()
+    {
+        // Arrange
+        using var pdf = new PdfBuilder();
+
+        // Act & Assert
+        Assert.ThrowsAny<IOException>(
+            () => pdf.AddImage("test", "/nonexistent/file.jpg"));
+    }
+
+    [Fact]
+    public void AddImage_ShouldThrow_WhenNameIsInvalid()
+    {
+        // Arrange
+        using var pdf = new PdfBuilder();
+
+        // Act & Assert - name with special chars that could cause PDF injection
+        Assert.Throws<ArgumentException>(
+            () => pdf.AddImage("bad<name>", CreateMinimalJpeg()));
+    }
+
+    [Fact]
+    public void GetJpegDimensions_ShouldThrow_WhenDataTooSmall()
+    {
+        // Arrange
+        var tinyData = new byte[] { 0xFF, 0xD8 }; // Just SOI, too small
+
+        using var pdf = new PdfBuilder();
+
+        // Act & Assert
+        Assert.Throws<InvalidDataException>(
+            () => pdf.AddImage("tiny", tinyData));
+    }
+
+    [Fact]
+    public void GetJpegDimensions_ShouldThrow_WhenNoSof0Marker()
+    {
+        // Arrange - valid JPEG structure but no SOF0
+        byte[] noSof0 =
+        [
+            0xFF, 0xD8,       // SOI
+            0xFF, 0xE0,       // APP0
+            0x00, 0x10,       // Length
+            0x4A, 0x46, 0x49, 0x46, 0x00, // JFIF\0
+            0x01, 0x01,       // Version
+            0x00,             // Units
+            0x00, 0x01,       // X density
+            0x00, 0x01,       // Y density
+            0x00, 0x00,       // Thumbnail
+            0xFF, 0xD9,       // EOI (no SOF0)
+        ];
+
+        using var pdf = new PdfBuilder();
+
+        // Act & Assert
+        Assert.Throws<InvalidDataException>(
+            () => pdf.AddImage("nosof0", noSof0));
+    }
+
+    [Fact]
+    public void Save_WithImage_ShouldIncludeImageInPDF()
+    {
+        // Arrange
+        using var pdf = new PdfBuilder();
+        pdf.AddImage("logo", CreateMinimalJpeg());
+        var page = pdf.AddPage();
+        page.Canvas.DrawImage("logo", 10, 10, 50, 50);
+        string tempPath = Path.GetTempFileName();
+
+        try
+        {
+            // Act
+            pdf.Save(tempPath);
+            string content = File.ReadAllText(tempPath);
+
+            // Assert - image XObject reference and stream
+            Assert.Contains("/XObject", content);
+            Assert.Contains("/logo", content);
+            Assert.Contains("/Subtype /Image", content);
+            Assert.Contains("/Filter /DCTDecode", content);
+        }
+        finally
+        {
+            File.Delete(tempPath);
+        }
+    }
+
+    [Fact]
+    public void Save_ShouldThrow_WhenPathIsNull()
+    {
+        using var pdf = new PdfBuilder();
+        Assert.Throws<ArgumentNullException>(() => pdf.Save(null!));
+    }
+
+    [Fact]
+    public void AddPage_ShouldTrackMultiplePages()
+    {
+        using var pdf = new PdfBuilder();
+        pdf.AddPage();
+        pdf.AddPage();
+        pdf.AddPage();
+
+        string tempPath = Path.GetTempFileName();
+        try
+        {
+            pdf.Save(tempPath);
+            string content = File.ReadAllText(tempPath);
+            // 3 pages should have /Count 3 in pages root
+            Assert.Contains("/Count 3", content);
+        }
+        finally { File.Delete(tempPath); }
+    }
+
     /// <summary>
     /// Creates a minimal valid JPEG file with SOF0 marker.
     /// </summary>

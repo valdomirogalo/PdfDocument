@@ -90,17 +90,7 @@ public sealed class PdfBuilder : IDisposable
         _pagesId = AllocateId();
 
         // ── Images ──────────────────────────────────────────────────────
-        var imageObjIds = new Dictionary<string, int>(StringComparer.Ordinal);
-        foreach (var kv in _images)
-        {
-            string name = kv.Key;
-            var info = kv.Value;
-            int objId = AllocateId();
-
-            imageObjIds[name] = objId;
-            _offsets[objId] = fs.Position;
-            WriteImageObject(fs, objId, info);
-        }
+        var imageObjIds = WriteImages(fs);
 
         // ── Pages ───────────────────────────────────────────────────────
         List<int> pageIds = new(_pages.Count);
@@ -228,6 +218,25 @@ public sealed class PdfBuilder : IDisposable
         writer.WriteLine($"{id} 0 obj");
         writer.WriteLine(content);
         writer.WriteLine("endobj");
+    }
+
+    /// <summary>
+    /// Writes all registered images as PDF XObject streams.
+    /// </summary>
+    private Dictionary<string, int> WriteImages(FileStream fs)
+    {
+        var imageObjIds = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var kv in _images)
+        {
+            string name = kv.Key;
+            var info = kv.Value;
+            int objId = AllocateId();
+
+            imageObjIds[name] = objId;
+            _offsets[objId] = fs.Position;
+            WriteImageObject(fs, objId, info);
+        }
+        return imageObjIds;
     }
 
     /// <summary>
