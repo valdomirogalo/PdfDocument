@@ -87,7 +87,6 @@ else
 
 Console.WriteLine();
 Console.WriteLine("═══ Playground concluído! ═══");
-Console.ReadKey();
 
 // ═════════════════════════════════════════════════════════════════════════
 //  HELPER METHODS
