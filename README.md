@@ -378,17 +378,6 @@ Results saved to `benchmarks/PdfDocument.Benchmarks/BenchmarkDotNet.Artifacts/re
 
 Based on **dotnet-dump analysis** (core dump from Playground sample on 2026-07-18), the following optimizations were implemented to reduce memory and prevent OOM in batch/high-throughput scenarios.
 
-### Issues Found in Dump & Code Review
-
-| Issue | Severity | Evidence |
-|-------|----------|----------|
-| `NotSupportedException` thrown/caught on every first `DrawText` call (WinAnsi encoding 1252 not registered) | **High** | Captured exception in dump: `"No data is available for encoding 1252"` |
-| `_objects` dictionary stored every PDF object's content string but **never read** | **High** | 100% CPU/memory waste; content held in memory until GC |
-| `StringBuilder` in `EscapePdfString` allocated per `DrawText` call | **Medium** | Extra heap alloc per text rendering |
-| `List<string>.Contains()` O(n) for image dedup lookup | **Low** | Fine for 1 image; scales poorly |
-| `XmlDocument` loaded entire NFe XML as DOM tree | **Medium** | ~50+ XPath queries, higher memory per parse |
-| No pre-allocation for `StringBuilder._cmds` | **Low** | Multiple resizes during document building |
-
 ### Improvements Applied
 
 | Area | Before | After | Improvement |
