@@ -11,7 +11,6 @@ public sealed class PdfBuilder : IDisposable
     private readonly List<PdfPage> _pages = [];
     private int _nextId = 1;
     private readonly Dictionary<int, long> _offsets = [];
-    private readonly Dictionary<int, string> _objects = [];
     private int _fontId;
     private int _pagesId;
     private int _catalogId;
@@ -162,9 +161,16 @@ public sealed class PdfBuilder : IDisposable
         writer.Flush();
     }
 
-    /// <summary>No unmanaged resources to release. Kept for compatibility.</summary>
+    /// <summary>
+    /// Releases all held memory (pages, images, offsets) so GC can reclaim
+    /// resources immediately. Call after Save() to minimise memory footprint
+    /// in batch/high-throughput scenarios.
+    /// </summary>
     public void Dispose()
     {
+        _pages.Clear();
+        _images.Clear();
+        _offsets.Clear();
         GC.SuppressFinalize(this);
     }
 
@@ -208,12 +214,10 @@ public sealed class PdfBuilder : IDisposable
     private int AllocateId() => _nextId++;
 
     /// <summary>
-    /// Writes an indirect PDF object: records its offset, stores it, and writes to stream.
-    /// Reduces repetition of the _objects/_offsets/WriteObject pattern.
+    /// Writes an indirect PDF object: records its offset and writes to stream.
     /// </summary>
     private void WriteIndirectObject(StreamWriter writer, FileStream fs, int id, string content)
     {
-        _objects[id] = content;
         _offsets[id] = fs.Position;
         WriteObject(writer, id, content);
     }

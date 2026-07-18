@@ -1,3 +1,4 @@
+using System.Xml.Linq;
 using System.Xml;
 
 namespace PdfDocument.NFe;
@@ -5,11 +6,12 @@ namespace PdfDocument.NFe;
 /// <summary>
 /// Parser for Nota Fiscal Eletrônica (NFe) XML files in 4.00 format.
 /// Extracts the data needed for DANFE generation (expanded layout).
+/// Uses XDocument (LINQ to XML) instead of XmlDocument for lower memory
+/// footprint and faster queries — no XPath overhead per field.
 /// </summary>
 public static class NFeParser
 {
-    private const string NfeNamespace = "http://www.portalfiscal.inf.br/nfe";
-    private const string NfePrefix = "nfe";
+    private static readonly XNamespace Ns = "http://www.portalfiscal.inf.br/nfe";
 
     /// <summary>
     /// Loads and extracts data from an NFe XML file.
@@ -21,135 +23,136 @@ public static class NFeParser
         if (!File.Exists(xmlPath))
             throw new FileNotFoundException($"XML file not found: {xmlPath}", xmlPath);
 
-        // CWE-611: disable DTD processing to prevent XXE attacks
-        var doc = new XmlDocument { XmlResolver = null };
-        doc.Load(xmlPath);
+        // CWE-611: disable DTD to prevent XXE attacks
+        var settings = new XmlReaderSettings
+        {
+            DtdProcessing = DtdProcessing.Prohibit,
+            XmlResolver = null
+        };
 
-        var ns = new XmlNamespaceManager(doc.NameTable);
-        ns.AddNamespace(NfePrefix, NfeNamespace);
+        using var reader = XmlReader.Create(xmlPath, settings);
+        var doc = XDocument.Load(reader);
 
-        XmlNode? infNFe = doc.SelectSingleNode($"//{NfePrefix}:infNFe", ns)
+        XElement? infNFe = doc.Descendants(Ns + "infNFe").FirstOrDefault()
             ?? throw new InvalidOperationException(
                 "Could not find infNFe node in XML. Verify the XML is a valid NFe.");
+
+        XElement? prot = doc.Descendants(Ns + "prot").FirstOrDefault();
 
         return new NFeData
         {
             // ── Identification ─────────────────────────────────────────
-            CUf = GetNodeText(infNFe, $"{NfePrefix}:ide/{NfePrefix}:cUF", ns),
-            NatOp = GetNodeText(infNFe, $"{NfePrefix}:ide/{NfePrefix}:natOp", ns),
-            Mod = GetNodeText(infNFe, $"{NfePrefix}:ide/{NfePrefix}:mod", ns),
-            Serie = GetNodeText(infNFe, $"{NfePrefix}:ide/{NfePrefix}:serie", ns),
-            Nnf = GetNodeText(infNFe, $"{NfePrefix}:ide/{NfePrefix}:nNF", ns),
-            DhEmi = GetNodeText(infNFe, $"{NfePrefix}:ide/{NfePrefix}:dhEmi", ns),
-            DhSaiEnt = GetNodeText(infNFe, $"{NfePrefix}:ide/{NfePrefix}:dhSaiEnt", ns),
-            TpNf = GetNodeText(infNFe, $"{NfePrefix}:ide/{NfePrefix}:tpNF", ns),
-            IdDest = GetNodeText(infNFe, $"{NfePrefix}:ide/{NfePrefix}:idDest", ns),
-            CMunFg = GetNodeText(infNFe, $"{NfePrefix}:ide/{NfePrefix}:cMunFG", ns),
-            TpAmb = GetNodeText(infNFe, $"{NfePrefix}:ide/{NfePrefix}:tpAmb", ns),
-            FinNfe = GetNodeText(infNFe, $"{NfePrefix}:ide/{NfePrefix}:finNFe", ns),
-            IndFinal = GetNodeText(infNFe, $"{NfePrefix}:ide/{NfePrefix}:indFinal", ns),
-            IndPres = GetNodeText(infNFe, $"{NfePrefix}:ide/{NfePrefix}:indPres", ns),
+            CUf = (string?)infNFe.Element(Ns + "ide")?.Element(Ns + "cUF") ?? "",
+            NatOp = (string?)infNFe.Element(Ns + "ide")?.Element(Ns + "natOp") ?? "",
+            Mod = (string?)infNFe.Element(Ns + "ide")?.Element(Ns + "mod") ?? "",
+            Serie = (string?)infNFe.Element(Ns + "ide")?.Element(Ns + "serie") ?? "",
+            Nnf = (string?)infNFe.Element(Ns + "ide")?.Element(Ns + "nNF") ?? "",
+            DhEmi = (string?)infNFe.Element(Ns + "ide")?.Element(Ns + "dhEmi") ?? "",
+            DhSaiEnt = (string?)infNFe.Element(Ns + "ide")?.Element(Ns + "dhSaiEnt") ?? "",
+            TpNf = (string?)infNFe.Element(Ns + "ide")?.Element(Ns + "tpNF") ?? "",
+            IdDest = (string?)infNFe.Element(Ns + "ide")?.Element(Ns + "idDest") ?? "",
+            CMunFg = (string?)infNFe.Element(Ns + "ide")?.Element(Ns + "cMunFG") ?? "",
+            TpAmb = (string?)infNFe.Element(Ns + "ide")?.Element(Ns + "tpAmb") ?? "",
+            FinNfe = (string?)infNFe.Element(Ns + "ide")?.Element(Ns + "finNFe") ?? "",
+            IndFinal = (string?)infNFe.Element(Ns + "ide")?.Element(Ns + "indFinal") ?? "",
+            IndPres = (string?)infNFe.Element(Ns + "ide")?.Element(Ns + "indPres") ?? "",
 
             // ── Protocol ───────────────────────────────────────────────
-            NProt = GetNodeText(infNFe, $"{NfePrefix}:prot/{NfePrefix}:infProt/{NfePrefix}:nProt", ns)
-                 ?? GetNodeText(doc.DocumentElement!, $"//{NfePrefix}:prot/{NfePrefix}:infProt/{NfePrefix}:nProt", ns),
-            DhAutor = GetNodeText(infNFe, $"{NfePrefix}:prot/{NfePrefix}:infProt/{NfePrefix}:dhRecbto", ns)
-                    ?? GetNodeText(doc.DocumentElement!, $"//{NfePrefix}:prot/{NfePrefix}:infProt/{NfePrefix}:dhRecbto", ns),
+            NProt = (string?)prot?.Element(Ns + "infProt")?.Element(Ns + "nProt") ?? "",
+            DhAutor = (string?)prot?.Element(Ns + "infProt")?.Element(Ns + "dhRecbto") ?? "",
 
             // ── Issuer ─────────────────────────────────────────────────
-            EmitCnpj = GetNodeText(infNFe, $"{NfePrefix}:emit/{NfePrefix}:CNPJ", ns),
-            EmitXNome = GetNodeText(infNFe, $"{NfePrefix}:emit/{NfePrefix}:xNome", ns),
-            EmitXFant = GetNodeText(infNFe, $"{NfePrefix}:emit/{NfePrefix}:xFant", ns),
-            EmitIe = GetNodeText(infNFe, $"{NfePrefix}:emit/{NfePrefix}:IE", ns),
-            EmitIeSt = GetNodeText(infNFe, $"{NfePrefix}:emit/{NfePrefix}:IEST", ns),
-            EmitCrt = GetNodeText(infNFe, $"{NfePrefix}:emit/{NfePrefix}:CRT", ns),
-            EmitXLogr = GetNodeText(infNFe, $"{NfePrefix}:emit/{NfePrefix}:enderEmit/{NfePrefix}:xLgr", ns),
-            EmitNro = GetNodeText(infNFe, $"{NfePrefix}:emit/{NfePrefix}:enderEmit/{NfePrefix}:nro", ns),
-            EmitXBairro = GetNodeText(infNFe, $"{NfePrefix}:emit/{NfePrefix}:enderEmit/{NfePrefix}:xBairro", ns),
-            EmitCMun = GetNodeText(infNFe, $"{NfePrefix}:emit/{NfePrefix}:enderEmit/{NfePrefix}:cMun", ns),
-            EmitXMun = GetNodeText(infNFe, $"{NfePrefix}:emit/{NfePrefix}:enderEmit/{NfePrefix}:xMun", ns),
-            EmitUf = GetNodeText(infNFe, $"{NfePrefix}:emit/{NfePrefix}:enderEmit/{NfePrefix}:UF", ns),
-            EmitCep = GetNodeText(infNFe, $"{NfePrefix}:emit/{NfePrefix}:enderEmit/{NfePrefix}:CEP", ns),
+            EmitCnpj = (string?)infNFe.Element(Ns + "emit")?.Element(Ns + "CNPJ") ?? "",
+            EmitXNome = (string?)infNFe.Element(Ns + "emit")?.Element(Ns + "xNome") ?? "",
+            EmitXFant = (string?)infNFe.Element(Ns + "emit")?.Element(Ns + "xFant") ?? "",
+            EmitIe = (string?)infNFe.Element(Ns + "emit")?.Element(Ns + "IE") ?? "",
+            EmitIeSt = (string?)infNFe.Element(Ns + "emit")?.Element(Ns + "IEST") ?? "",
+            EmitCrt = (string?)infNFe.Element(Ns + "emit")?.Element(Ns + "CRT") ?? "",
+            EmitXLogr = (string?)infNFe.Element(Ns + "emit")?.Element(Ns + "enderEmit")?.Element(Ns + "xLgr") ?? "",
+            EmitNro = (string?)infNFe.Element(Ns + "emit")?.Element(Ns + "enderEmit")?.Element(Ns + "nro") ?? "",
+            EmitXBairro = (string?)infNFe.Element(Ns + "emit")?.Element(Ns + "enderEmit")?.Element(Ns + "xBairro") ?? "",
+            EmitCMun = (string?)infNFe.Element(Ns + "emit")?.Element(Ns + "enderEmit")?.Element(Ns + "cMun") ?? "",
+            EmitXMun = (string?)infNFe.Element(Ns + "emit")?.Element(Ns + "enderEmit")?.Element(Ns + "xMun") ?? "",
+            EmitUf = (string?)infNFe.Element(Ns + "emit")?.Element(Ns + "enderEmit")?.Element(Ns + "UF") ?? "",
+            EmitCep = (string?)infNFe.Element(Ns + "emit")?.Element(Ns + "enderEmit")?.Element(Ns + "CEP") ?? "",
 
             // ── Recipient ──────────────────────────────────────────────
-            DestCnpj = GetNodeText(infNFe, $"{NfePrefix}:dest/{NfePrefix}:CNPJ", ns),
-            DestXNome = GetNodeText(infNFe, $"{NfePrefix}:dest/{NfePrefix}:xNome", ns),
-            DestXLogr = GetNodeText(infNFe, $"{NfePrefix}:dest/{NfePrefix}:enderDest/{NfePrefix}:xLgr", ns),
-            DestNro = GetNodeText(infNFe, $"{NfePrefix}:dest/{NfePrefix}:enderDest/{NfePrefix}:nro", ns),
-            DestXBairro = GetNodeText(infNFe, $"{NfePrefix}:dest/{NfePrefix}:enderDest/{NfePrefix}:xBairro", ns),
-            DestCMun = GetNodeText(infNFe, $"{NfePrefix}:dest/{NfePrefix}:enderDest/{NfePrefix}:cMun", ns),
-            DestXMun = GetNodeText(infNFe, $"{NfePrefix}:dest/{NfePrefix}:enderDest/{NfePrefix}:xMun", ns),
-            DestUf = GetNodeText(infNFe, $"{NfePrefix}:dest/{NfePrefix}:enderDest/{NfePrefix}:UF", ns),
-            DestIe = GetNodeText(infNFe, $"{NfePrefix}:dest/{NfePrefix}:IE", ns),
-            DestFone = GetNodeText(infNFe, $"{NfePrefix}:dest/{NfePrefix}:enderDest/{NfePrefix}:fone", ns),
+            DestCnpj = (string?)infNFe.Element(Ns + "dest")?.Element(Ns + "CNPJ") ?? "",
+            DestXNome = (string?)infNFe.Element(Ns + "dest")?.Element(Ns + "xNome") ?? "",
+            DestXLogr = (string?)infNFe.Element(Ns + "dest")?.Element(Ns + "enderDest")?.Element(Ns + "xLgr") ?? "",
+            DestNro = (string?)infNFe.Element(Ns + "dest")?.Element(Ns + "enderDest")?.Element(Ns + "nro") ?? "",
+            DestXBairro = (string?)infNFe.Element(Ns + "dest")?.Element(Ns + "enderDest")?.Element(Ns + "xBairro") ?? "",
+            DestCMun = (string?)infNFe.Element(Ns + "dest")?.Element(Ns + "enderDest")?.Element(Ns + "cMun") ?? "",
+            DestXMun = (string?)infNFe.Element(Ns + "dest")?.Element(Ns + "enderDest")?.Element(Ns + "xMun") ?? "",
+            DestUf = (string?)infNFe.Element(Ns + "dest")?.Element(Ns + "enderDest")?.Element(Ns + "UF") ?? "",
+            DestIe = (string?)infNFe.Element(Ns + "dest")?.Element(Ns + "IE") ?? "",
+            DestFone = (string?)infNFe.Element(Ns + "dest")?.Element(Ns + "enderDest")?.Element(Ns + "fone") ?? "",
 
             // ── Product (first item) ───────────────────────────────────
-            CProd = GetNodeText(infNFe, $"{NfePrefix}:det/{NfePrefix}:prod/{NfePrefix}:cProd", ns),
-            XProd = GetNodeText(infNFe, $"{NfePrefix}:det/{NfePrefix}:prod/{NfePrefix}:xProd", ns),
-            Ncm = GetNodeText(infNFe, $"{NfePrefix}:det/{NfePrefix}:prod/{NfePrefix}:NCM", ns),
-            Cst = GetNodeText(infNFe, $"{NfePrefix}:det/{NfePrefix}:imposto/{NfePrefix}:ICMS/*/{NfePrefix}:CST", ns)
-                ?? GetNodeText(infNFe, $"{NfePrefix}:det/{NfePrefix}:imposto/{NfePrefix}:IPI/{NfePrefix}:CST", ns),
-            Cfop = GetNodeText(infNFe, $"{NfePrefix}:det/{NfePrefix}:prod/{NfePrefix}:CFOP", ns),
-            UCom = GetNodeText(infNFe, $"{NfePrefix}:det/{NfePrefix}:prod/{NfePrefix}:uCom", ns),
-            QCom = GetNodeText(infNFe, $"{NfePrefix}:det/{NfePrefix}:prod/{NfePrefix}:qCom", ns),
-            VUnCom = GetNodeText(infNFe, $"{NfePrefix}:det/{NfePrefix}:prod/{NfePrefix}:vUnCom", ns),
-            VProd = GetNodeText(infNFe, $"{NfePrefix}:det/{NfePrefix}:prod/{NfePrefix}:vProd", ns),
-            VProdDesc = GetNodeText(infNFe, $"{NfePrefix}:det/{NfePrefix}:prod/{NfePrefix}:vDesc", ns),
-            VBcProd = GetNodeText(infNFe, $"{NfePrefix}:det/{NfePrefix}:imposto/{NfePrefix}:ICMS/*/{NfePrefix}:vBC", ns),
-            VIcmsProd = GetNodeText(infNFe, $"{NfePrefix}:det/{NfePrefix}:imposto/{NfePrefix}:ICMS/*/{NfePrefix}:vICMS", ns),
-            VIpiProd = GetNodeText(infNFe, $"{NfePrefix}:det/{NfePrefix}:imposto/{NfePrefix}:IPI/{NfePrefix}:vIPI", ns),
-            PIcms = GetNodeText(infNFe, $"{NfePrefix}:det/{NfePrefix}:imposto/{NfePrefix}:ICMS/*/{NfePrefix}:pICMS", ns) ?? "",
-            PIpi = GetNodeText(infNFe, $"{NfePrefix}:det/{NfePrefix}:imposto/{NfePrefix}:IPI/{NfePrefix}:pIPI", ns) ?? "",
+            CProd = (string?)infNFe.Element(Ns + "det")?.Element(Ns + "prod")?.Element(Ns + "cProd") ?? "",
+            XProd = (string?)infNFe.Element(Ns + "det")?.Element(Ns + "prod")?.Element(Ns + "xProd") ?? "",
+            Ncm = (string?)infNFe.Element(Ns + "det")?.Element(Ns + "prod")?.Element(Ns + "NCM") ?? "",
+            Cst = (string?)infNFe.Element(Ns + "det")?.Element(Ns + "imposto")?
+                      .Element(Ns + "ICMS")?.Element(Ns + "CST")
+                  ?? (string?)infNFe.Element(Ns + "det")?.Element(Ns + "imposto")?
+                      .Element(Ns + "IPI")?.Element(Ns + "CST") ?? "",
+            Cfop = (string?)infNFe.Element(Ns + "det")?.Element(Ns + "prod")?.Element(Ns + "CFOP") ?? "",
+            UCom = (string?)infNFe.Element(Ns + "det")?.Element(Ns + "prod")?.Element(Ns + "uCom") ?? "",
+            QCom = (string?)infNFe.Element(Ns + "det")?.Element(Ns + "prod")?.Element(Ns + "qCom") ?? "",
+            VUnCom = (string?)infNFe.Element(Ns + "det")?.Element(Ns + "prod")?.Element(Ns + "vUnCom") ?? "",
+            VProd = (string?)infNFe.Element(Ns + "det")?.Element(Ns + "prod")?.Element(Ns + "vProd") ?? "",
+            VProdDesc = (string?)infNFe.Element(Ns + "det")?.Element(Ns + "prod")?.Element(Ns + "vDesc") ?? "",
+            VBcProd = (string?)infNFe.Element(Ns + "det")?.Element(Ns + "imposto")?
+                          .Element(Ns + "ICMS")?.Element(Ns + "vBC") ?? "",
+            VIcmsProd = (string?)infNFe.Element(Ns + "det")?.Element(Ns + "imposto")?
+                            .Element(Ns + "ICMS")?.Element(Ns + "vICMS") ?? "",
+            VIpiProd = (string?)infNFe.Element(Ns + "det")?.Element(Ns + "imposto")?
+                           .Element(Ns + "IPI")?.Element(Ns + "vIPI") ?? "",
+            PIcms = (string?)infNFe.Element(Ns + "det")?.Element(Ns + "imposto")?
+                        .Element(Ns + "ICMS")?.Element(Ns + "pICMS") ?? "",
+            PIpi = (string?)infNFe.Element(Ns + "det")?.Element(Ns + "imposto")?
+                       .Element(Ns + "IPI")?.Element(Ns + "pIPI") ?? "",
 
             // ── Totals ──────────────────────────────────────────────────
-            VBc = GetNodeText(infNFe, $"{NfePrefix}:total/{NfePrefix}:ICMSTot/{NfePrefix}:vBC", ns),
-            VIcms = GetNodeText(infNFe, $"{NfePrefix}:total/{NfePrefix}:ICMSTot/{NfePrefix}:vICMS", ns),
-            VBcSt = GetNodeText(infNFe, $"{NfePrefix}:total/{NfePrefix}:ICMSTot/{NfePrefix}:vBCST", ns),
-            VSt = GetNodeText(infNFe, $"{NfePrefix}:total/{NfePrefix}:ICMSTot/{NfePrefix}:vST", ns),
-            VProdTotal = GetNodeText(infNFe, $"{NfePrefix}:total/{NfePrefix}:ICMSTot/{NfePrefix}:vProd", ns),
-            VFrete = GetNodeText(infNFe, $"{NfePrefix}:total/{NfePrefix}:ICMSTot/{NfePrefix}:vFrete", ns),
-            VSeg = GetNodeText(infNFe, $"{NfePrefix}:total/{NfePrefix}:ICMSTot/{NfePrefix}:vSeg", ns),
-            VDesc = GetNodeText(infNFe, $"{NfePrefix}:total/{NfePrefix}:ICMSTot/{NfePrefix}:vDesc", ns),
-            VOutro = GetNodeText(infNFe, $"{NfePrefix}:total/{NfePrefix}:ICMSTot/{NfePrefix}:vOutro", ns),
-            VIpi = GetNodeText(infNFe, $"{NfePrefix}:total/{NfePrefix}:ICMSTot/{NfePrefix}:vIPI", ns),
-            VNf = GetNodeText(infNFe, $"{NfePrefix}:total/{NfePrefix}:ICMSTot/{NfePrefix}:vNF", ns),
-            VAproxTrib = GetNodeText(infNFe, $"{NfePrefix}:total/{NfePrefix}:ICMSTot/{NfePrefix}:vTotTrib", ns),
+            VBc = (string?)infNFe.Element(Ns + "total")?.Element(Ns + "ICMSTot")?.Element(Ns + "vBC") ?? "",
+            VIcms = (string?)infNFe.Element(Ns + "total")?.Element(Ns + "ICMSTot")?.Element(Ns + "vICMS") ?? "",
+            VBcSt = (string?)infNFe.Element(Ns + "total")?.Element(Ns + "ICMSTot")?.Element(Ns + "vBCST") ?? "",
+            VSt = (string?)infNFe.Element(Ns + "total")?.Element(Ns + "ICMSTot")?.Element(Ns + "vST") ?? "",
+            VProdTotal = (string?)infNFe.Element(Ns + "total")?.Element(Ns + "ICMSTot")?.Element(Ns + "vProd") ?? "",
+            VFrete = (string?)infNFe.Element(Ns + "total")?.Element(Ns + "ICMSTot")?.Element(Ns + "vFrete") ?? "",
+            VSeg = (string?)infNFe.Element(Ns + "total")?.Element(Ns + "ICMSTot")?.Element(Ns + "vSeg") ?? "",
+            VDesc = (string?)infNFe.Element(Ns + "total")?.Element(Ns + "ICMSTot")?.Element(Ns + "vDesc") ?? "",
+            VOutro = (string?)infNFe.Element(Ns + "total")?.Element(Ns + "ICMSTot")?.Element(Ns + "vOutro") ?? "",
+            VIpi = (string?)infNFe.Element(Ns + "total")?.Element(Ns + "ICMSTot")?.Element(Ns + "vIPI") ?? "",
+            VNf = (string?)infNFe.Element(Ns + "total")?.Element(Ns + "ICMSTot")?.Element(Ns + "vNF") ?? "",
+            VAproxTrib = (string?)infNFe.Element(Ns + "total")?.Element(Ns + "ICMSTot")?.Element(Ns + "vTotTrib") ?? "",
 
             // ── Carrier ─────────────────────────────────────────────────
-            TransCnpj = GetNodeText(infNFe, $"{NfePrefix}:transp/{NfePrefix}:transporta/{NfePrefix}:CNPJ", ns),
-            TransXNome = GetNodeText(infNFe, $"{NfePrefix}:transp/{NfePrefix}:transporta/{NfePrefix}:xNome", ns),
-            TransIe = GetNodeText(infNFe, $"{NfePrefix}:transp/{NfePrefix}:transporta/{NfePrefix}:IE", ns),
-            TransXEnder = GetNodeText(infNFe, $"{NfePrefix}:transp/{NfePrefix}:transporta/{NfePrefix}:xEnder", ns),
-            TransXMun = GetNodeText(infNFe, $"{NfePrefix}:transp/{NfePrefix}:transporta/{NfePrefix}:xMun", ns),
-            TransUf = GetNodeText(infNFe, $"{NfePrefix}:transp/{NfePrefix}:transporta/{NfePrefix}:UF", ns),
-            ModFrete = GetNodeText(infNFe, $"{NfePrefix}:transp/{NfePrefix}:modFrete", ns),
-            TransPlaca = GetNodeText(infNFe, $"{NfePrefix}:transp/{NfePrefix}:veicTransp/{NfePrefix}:placa", ns),
-            TransUFVeic = GetNodeText(infNFe, $"{NfePrefix}:transp/{NfePrefix}:veicTransp/{NfePrefix}:UF", ns),
-            TransAntt = GetNodeText(infNFe, $"{NfePrefix}:transp/{NfePrefix}:reboque/{NfePrefix}:RNTC", ns)
-                      ?? GetNodeText(infNFe, $"{NfePrefix}:transp/{NfePrefix}:veicTransp/{NfePrefix}:RNTC", ns) ?? "",
-            TransQVol = GetNodeText(infNFe, $"{NfePrefix}:transp/{NfePrefix}:vol/{NfePrefix}:qVol", ns),
-            TransEspecie = GetNodeText(infNFe, $"{NfePrefix}:transp/{NfePrefix}:vol/{NfePrefix}:esp", ns),
-            TransMarca = GetNodeText(infNFe, $"{NfePrefix}:transp/{NfePrefix}:vol/{NfePrefix}:marca", ns),
-            TransNumVol = GetNodeText(infNFe, $"{NfePrefix}:transp/{NfePrefix}:vol/{NfePrefix}:nVol", ns),
-            TransPesoB = GetNodeText(infNFe, $"{NfePrefix}:transp/{NfePrefix}:vol/{NfePrefix}:pesoB", ns),
-            TransPesoL = GetNodeText(infNFe, $"{NfePrefix}:transp/{NfePrefix}:vol/{NfePrefix}:pesoL", ns),
+            TransCnpj = (string?)infNFe.Element(Ns + "transp")?.Element(Ns + "transporta")?.Element(Ns + "CNPJ") ?? "",
+            TransXNome = (string?)infNFe.Element(Ns + "transp")?.Element(Ns + "transporta")?.Element(Ns + "xNome") ?? "",
+            TransIe = (string?)infNFe.Element(Ns + "transp")?.Element(Ns + "transporta")?.Element(Ns + "IE") ?? "",
+            TransXEnder = (string?)infNFe.Element(Ns + "transp")?.Element(Ns + "transporta")?.Element(Ns + "xEnder") ?? "",
+            TransXMun = (string?)infNFe.Element(Ns + "transp")?.Element(Ns + "transporta")?.Element(Ns + "xMun") ?? "",
+            TransUf = (string?)infNFe.Element(Ns + "transp")?.Element(Ns + "transporta")?.Element(Ns + "UF") ?? "",
+            ModFrete = (string?)infNFe.Element(Ns + "transp")?.Element(Ns + "modFrete") ?? "",
+            TransPlaca = (string?)infNFe.Element(Ns + "transp")?.Element(Ns + "veicTransp")?.Element(Ns + "placa") ?? "",
+            TransUFVeic = (string?)infNFe.Element(Ns + "transp")?.Element(Ns + "veicTransp")?.Element(Ns + "UF") ?? "",
+            TransAntt = (string?)infNFe.Element(Ns + "transp")?.Element(Ns + "reboque")?.Element(Ns + "RNTC")
+                     ?? (string?)infNFe.Element(Ns + "transp")?.Element(Ns + "veicTransp")?.Element(Ns + "RNTC") ?? "",
+            TransQVol = (string?)infNFe.Element(Ns + "transp")?.Element(Ns + "vol")?.Element(Ns + "qVol") ?? "",
+            TransEspecie = (string?)infNFe.Element(Ns + "transp")?.Element(Ns + "vol")?.Element(Ns + "esp") ?? "",
+            TransMarca = (string?)infNFe.Element(Ns + "transp")?.Element(Ns + "vol")?.Element(Ns + "marca") ?? "",
+            TransNumVol = (string?)infNFe.Element(Ns + "transp")?.Element(Ns + "vol")?.Element(Ns + "nVol") ?? "",
+            TransPesoB = (string?)infNFe.Element(Ns + "transp")?.Element(Ns + "vol")?.Element(Ns + "pesoB") ?? "",
+            TransPesoL = (string?)infNFe.Element(Ns + "transp")?.Element(Ns + "vol")?.Element(Ns + "pesoL") ?? "",
 
             // ── Payment ─────────────────────────────────────────────────
-            TPag = GetNodeText(infNFe, $"{NfePrefix}:pag/{NfePrefix}:detPag/{NfePrefix}:tPag", ns),
-            VPag = GetNodeText(infNFe, $"{NfePrefix}:pag/{NfePrefix}:detPag/{NfePrefix}:vPag", ns),
+            TPag = (string?)infNFe.Element(Ns + "pag")?.Element(Ns + "detPag")?.Element(Ns + "tPag") ?? "",
+            VPag = (string?)infNFe.Element(Ns + "pag")?.Element(Ns + "detPag")?.Element(Ns + "vPag") ?? "",
 
             // ── Additional Info ─────────────────────────────────────────
-            InfCpl = GetNodeText(infNFe, $"{NfePrefix}:infAdic/{NfePrefix}:infCpl", ns),
-            InfAdic = GetNodeText(infNFe, $"{NfePrefix}:infAdic/{NfePrefix}:infAdFisco", ns),
+            InfCpl = (string?)infNFe.Element(Ns + "infAdic")?.Element(Ns + "infCpl") ?? "",
+            InfAdic = (string?)infNFe.Element(Ns + "infAdic")?.Element(Ns + "infAdFisco") ?? "",
         };
-    }
-
-    /// <summary>
-    /// Extracts text from a child XML node, returning empty string if not found.
-    /// </summary>
-    private static string GetNodeText(XmlNode parent, string xpath, XmlNamespaceManager ns)
-    {
-        var node = parent.SelectSingleNode(xpath, ns);
-        return node?.InnerText ?? "";
     }
 }

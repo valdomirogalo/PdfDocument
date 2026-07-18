@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Text;
 
 namespace PdfDocument;
@@ -9,11 +10,12 @@ namespace PdfDocument;
 /// </summary>
 public class PdfCanvas
 {
-    private readonly StringBuilder _cmds = new();
-    private readonly List<string> _usedImages = [];
+    // Pre-allocate a reasonable capacity to avoid frequent resizing
+    private readonly StringBuilder _cmds = new(4096);
+    private readonly HashSet<string> _usedImages = [];
 
-    /// <summary>List of image names referenced in this canvas.</summary>
-    public IReadOnlyList<string> UsedImages => _usedImages;
+    /// <summary>Set of image names referenced in this canvas.</summary>
+    public IReadOnlySet<string> UsedImages => _usedImages;
 
     /// <summary>
     /// Horizontal text alignment.
@@ -28,7 +30,16 @@ public class PdfCanvas
         Right
     }
 
+    // Lazily initialize WinAnsiEncoding — registers CodePagesEncodingProvider
+    // on first access. This avoids the try-catch + NotSupportedException penalty
+    // that was observed in the dotnet-dump analysis.
     private static readonly Encoding WinAnsiEncoding = GetWinAnsiEncoding();
+
+    private static Encoding GetWinAnsiEncoding()
+    {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        return Encoding.GetEncoding(1252);
+    }
 
     /// <summary>
     /// Initializes the canvas with default colors (black) for stroke and fill.
@@ -37,22 +48,6 @@ public class PdfCanvas
     {
         _cmds.AppendLine("0 0 0 RG");
         _cmds.AppendLine("0 0 0 rg");
-    }
-
-    /// <summary>
-    /// Gets the WinAnsi (1252) encoding, registering the CodePages provider if needed.
-    /// </summary>
-    private static Encoding GetWinAnsiEncoding()
-    {
-        try
-        {
-            return Encoding.GetEncoding(1252);
-        }
-        catch (NotSupportedException)
-        {
-            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-            return Encoding.GetEncoding(1252);
-        }
     }
 
     /// <summary>
@@ -104,8 +99,8 @@ public class PdfCanvas
         if (!PdfConstants.IsValidPdfName(name))
             throw new ArgumentException("Image name must be alphanumeric (dashes and underscores allowed).", nameof(name));
 
-        if (!_usedImages.Contains(name))
-            _usedImages.Add(name);
+        // HashSet.Add is idempotent (no-op if already present)
+        _usedImages.Add(name);
 
         _cmds.AppendLine($"q {F(width)} 0 0 {F(height)} {F(x)} {F(y)} cm /{name} Do Q");
     }
@@ -229,6 +224,8 @@ public class PdfCanvas
     /// <summary>
     /// Escapes a string for use in PDF text operators,
     /// encoding in WinAnsi (1252) and escaping special characters.
+    /// Single-pass: writes to a pooled char buffer then constructs
+    /// the result string — zero intermediate StringBuilder/byte[] allocations.
     /// </summary>
     private static string EscapePdfString(string text)
     {
@@ -238,29 +235,50 @@ public class PdfCanvas
                 $"Text exceeds maximum length of {PdfConstants.MaxTextLength} characters for PDF rendering.",
                 nameof(text));
 
-        byte[] bytes = WinAnsiEncoding.GetBytes(text);
-        var escaped = new StringBuilder(bytes.Length);
-
-        foreach (byte b in bytes)
+        // Rent byte buffer from ArrayPool (avoids byte[] allocation per call)
+        int maxByteCount = WinAnsiEncoding.GetMaxByteCount(text.Length);
+        byte[] rentedBytes = ArrayPool<byte>.Shared.Rent(maxByteCount);
+        try
         {
-            if (b == '(' || b == ')' || b == '\\')
+            int byteCount = WinAnsiEncoding.GetBytes(text, 0, text.Length, rentedBytes, 0);
+            Span<byte> src = rentedBytes.AsSpan(0, byteCount);
+
+            // Worst case: every byte becomes \xxx octal (4 chars each).
+            // Rent generously then build result string from the used portion.
+            char[] rentedChars = ArrayPool<char>.Shared.Rent(byteCount * 4);
+            try
             {
-                escaped.Append('\\');
-                escaped.Append((char)b);
+                int pos = 0;
+                foreach (byte b in src)
+                {
+                    if (b == '(' || b == ')' || b == '\\')
+                    {
+                        rentedChars[pos++] = '\\';
+                        rentedChars[pos++] = (char)b;
+                    }
+                    else if (b < 32 || b > 126)
+                    {
+                        rentedChars[pos++] = '\\';
+                        rentedChars[pos++] = (char)('0' + (b / 64));
+                        rentedChars[pos++] = (char)('0' + ((b / 8) % 8));
+                        rentedChars[pos++] = (char)('0' + (b % 8));
+                    }
+                    else
+                    {
+                        rentedChars[pos++] = (char)b;
+                    }
+                }
+
+                return new string(rentedChars, 0, pos);
             }
-            else if (b < 32 || b > 126)
+            finally
             {
-                escaped.Append('\\');
-                escaped.Append((char)('0' + (b / 64)));
-                escaped.Append((char)('0' + ((b / 8) % 8)));
-                escaped.Append((char)('0' + (b % 8)));
-            }
-            else
-            {
-                escaped.Append((char)b);
+                ArrayPool<char>.Shared.Return(rentedChars);
             }
         }
-
-        return escaped.ToString();
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(rentedBytes);
+        }
     }
 }
