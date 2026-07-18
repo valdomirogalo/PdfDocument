@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/PdfDocument.Benchmarks/PdfDocument.Benchmarks.csproj" />
+  </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/Playground/Playground.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/PdfDocument/PdfDocument.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PdfDocument.Tests/PdfDocument.Tests.csproj" />
+  </Folder>
+</Solution>
