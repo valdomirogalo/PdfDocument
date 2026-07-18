@@ -231,6 +231,162 @@ public sealed class NFeParserTests
         }
     }
 
+    [Fact]
+    public void Parse_ShouldExtractProtocolFields()
+    {
+        // Arrange
+        string tempXml = Path.GetTempFileName();
+        File.WriteAllText(tempXml, NfeWithProtocol());
+
+        try
+        {
+            // Act
+            var data = NFe.NFeParser.Parse(tempXml);
+
+            // Assert
+            Assert.Equal("123456789012345", data.NProt);
+            Assert.NotEmpty(data.DhAutor);
+        }
+        finally
+        {
+            File.Delete(tempXml);
+        }
+    }
+
+    [Fact]
+    public void Parse_ShouldExtractAdicionalFields()
+    {
+        // Arrange
+        string tempXml = Path.GetTempFileName();
+        File.WriteAllText(tempXml, NfeWithAdicional());
+
+        try
+        {
+            // Act
+            var data = NFe.NFeParser.Parse(tempXml);
+
+            // Assert
+            Assert.Equal("Informacoes complementares", data.InfCpl);
+            Assert.Equal("Reservado ao fisco", data.InfAdic);
+        }
+        finally
+        {
+            File.Delete(tempXml);
+        }
+    }
+
+    [Fact]
+    public void Parse_ShouldExtractIeSt()
+    {
+        // Arrange
+        string tempXml = Path.GetTempFileName();
+        File.WriteAllText(tempXml, NfeWithIeSt());
+
+        try
+        {
+            // Act
+            var data = NFe.NFeParser.Parse(tempXml);
+
+            // Assert
+            Assert.Equal("333333333", data.EmitIeSt);
+        }
+        finally
+        {
+            File.Delete(tempXml);
+        }
+    }
+
+    [Fact]
+    public void Parse_ShouldExtractVeicTranspFields()
+    {
+        // Arrange
+        string tempXml = Path.GetTempFileName();
+        File.WriteAllText(tempXml, NfeWithVeicTransp());
+
+        try
+        {
+            // Act
+            var data = NFe.NFeParser.Parse(tempXml);
+
+            // Assert
+            Assert.Equal("ABC1234", data.TransPlaca);
+            Assert.Equal("SP", data.TransUFVeic);
+            Assert.Equal("123456", data.TransAntt);
+        }
+        finally
+        {
+            File.Delete(tempXml);
+        }
+    }
+
+    [Fact]
+    public void Parse_ShouldExtractVolumesFields()
+    {
+        // Arrange
+        string tempXml = Path.GetTempFileName();
+        File.WriteAllText(tempXml, NfeWithVolumes());
+
+        try
+        {
+            // Act
+            var data = NFe.NFeParser.Parse(tempXml);
+
+            // Assert
+            Assert.Equal("10", data.TransQVol);
+            Assert.Equal("CAIXA", data.TransEspecie);
+            Assert.Equal("M1", data.TransMarca);
+            Assert.Equal("100/200", data.TransNumVol);
+            Assert.Equal("50.000", data.TransPesoB);
+            Assert.Equal("48.000", data.TransPesoL);
+        }
+        finally
+        {
+            File.Delete(tempXml);
+        }
+    }
+
+    [Fact]
+    public void Parse_ShouldExtractCstFromICMS()
+    {
+        // Arrange
+        string tempXml = Path.GetTempFileName();
+        File.WriteAllText(tempXml, NfeWithICmsCst());
+
+        try
+        {
+            // Act
+            var data = NFe.NFeParser.Parse(tempXml);
+
+            // Assert
+            Assert.Equal("00", data.Cst);
+        }
+        finally
+        {
+            File.Delete(tempXml);
+        }
+    }
+
+    [Fact]
+    public void Parse_ShouldExtractCstFromIPI_WhenNoICMS()
+    {
+        // Arrange
+        string tempXml = Path.GetTempFileName();
+        File.WriteAllText(tempXml, NfeWithIpiCst());
+
+        try
+        {
+            // Act
+            var data = NFe.NFeParser.Parse(tempXml);
+
+            // Assert
+            Assert.Equal("50", data.Cst);
+        }
+        finally
+        {
+            File.Delete(tempXml);
+        }
+    }
+
     /// <summary>
     /// Creates a minimal NFe XML for testing.
     /// </summary>
@@ -346,6 +502,153 @@ public sealed class NFeParserTests
         <serie>1</serie>
         <nNF>1</nNF>
       </ide>
+    </infNFe>
+  </NFe>
+</enviNFe>";
+
+    private static string NfeWithProtocol() => @"<?xml version=""1.0"" encoding=""utf-8""?>
+<enviNFe versao=""4.00"" xmlns=""http://www.portalfiscal.inf.br/nfe"">
+  <NFe xmlns=""http://www.portalfiscal.inf.br/nfe"">
+    <infNFe Id=""NFeTeste"" versao=""4.00"">
+      <ide>
+        <mod>55</mod>
+        <serie>1</serie>
+        <nNF>1</nNF>
+        <cUF>21</cUF>
+        <natOp>VENDA</natOp>
+        <dhEmi>2026-07-18T10:00:00-03:00</dhEmi>
+        <tpNF>1</tpNF>
+        <idDest>1</idDest>
+        <cMunFG>2111300</cMunFG>
+        <tpAmb>2</tpAmb>
+        <finNFe>1</finNFe>
+        <indFinal>1</indFinal>
+        <indPres>9</indPres>
+      </ide>
+      <emit><CNPJ>11111111000111</CNPJ><xNome>TESTE</xNome><IE>1</IE><CRT>3</CRT></emit>
+      <dest><CNPJ>22222222000122</CNPJ><xNome>DEST</xNome><IE>2</IE><enderDest><UF>RJ</UF></enderDest></dest>
+    </infNFe>
+  </NFe>
+  <prot>
+    <infProt Id=""ID123"">
+      <tpAmb>2</tpAmb>
+      <verAplic>1.0</verAplic>
+      <chNFe>12345678901234567890123456789012345678901234</chNFe>
+      <dhRecbto>2026-07-18T10:00:00-03:00</dhRecbto>
+      <nProt>123456789012345</nProt>
+      <digVal>abc123</digVal>
+      <cStat>100</cStat>
+      <xMotivo>Autorizado</xMotivo>
+    </infProt>
+  </prot>
+</enviNFe>";
+
+    private static string NfeWithAdicional() => @"<?xml version=""1.0"" encoding=""utf-8""?>
+<enviNFe versao=""4.00"" xmlns=""http://www.portalfiscal.inf.br/nfe"">
+  <NFe xmlns=""http://www.portalfiscal.inf.br/nfe"">
+    <infNFe Id=""NFeTeste"" versao=""4.00"">
+      <ide><mod>55</mod><serie>1</serie><nNF>1</nNF><cUF>21</cUF><natOp>VENDA</natOp><dhEmi>2026-07-18</dhEmi><tpNF>1</tpNF><idDest>1</idDest><cMunFG>2111300</cMunFG><tpAmb>2</tpAmb><finNFe>1</finNFe><indFinal>1</indFinal><indPres>9</indPres></ide>
+      <emit><CNPJ>11111111000111</CNPJ><xNome>TESTE</xNome><IE>1</IE><CRT>3</CRT></emit>
+      <dest><CNPJ>22222222000122</CNPJ><xNome>DEST</xNome><IE>2</IE><enderDest><UF>RJ</UF></enderDest></dest>
+      <infAdic>
+        <infCpl>Informacoes complementares</infCpl>
+        <infAdFisco>Reservado ao fisco</infAdFisco>
+      </infAdic>
+    </infNFe>
+  </NFe>
+</enviNFe>";
+
+    private static string NfeWithIeSt() => @"<?xml version=""1.0"" encoding=""utf-8""?>
+<enviNFe versao=""4.00"" xmlns=""http://www.portalfiscal.inf.br/nfe"">
+  <NFe xmlns=""http://www.portalfiscal.inf.br/nfe"">
+    <infNFe Id=""NFeTeste"" versao=""4.00"">
+      <ide><mod>55</mod><serie>1</serie><nNF>1</nNF><cUF>21</cUF><natOp>VENDA</natOp><dhEmi>2026-07-18</dhEmi><tpNF>1</tpNF><idDest>1</idDest><cMunFG>2111300</cMunFG><tpAmb>2</tpAmb><finNFe>1</finNFe><indFinal>1</indFinal><indPres>9</indPres></ide>
+      <emit><CNPJ>11111111000111</CNPJ><xNome>TESTE</xNome><IE>1</IE><IEST>333333333</IEST><CRT>3</CRT></emit>
+      <dest><CNPJ>22222222000122</CNPJ><xNome>DEST</xNome><IE>2</IE><enderDest><UF>RJ</UF></enderDest></dest>
+    </infNFe>
+  </NFe>
+</enviNFe>";
+
+    private static string NfeWithVeicTransp() => @"<?xml version=""1.0"" encoding=""utf-8""?>
+<enviNFe versao=""4.00"" xmlns=""http://www.portalfiscal.inf.br/nfe"">
+  <NFe xmlns=""http://www.portalfiscal.inf.br/nfe"">
+    <infNFe Id=""NFeTeste"" versao=""4.00"">
+      <ide><mod>55</mod><serie>1</serie><nNF>1</nNF><cUF>21</cUF><natOp>VENDA</natOp><dhEmi>2026-07-18</dhEmi><tpNF>1</tpNF><idDest>1</idDest><cMunFG>2111300</cMunFG><tpAmb>2</tpAmb><finNFe>1</finNFe><indFinal>1</indFinal><indPres>9</indPres></ide>
+      <emit><CNPJ>11111111000111</CNPJ><xNome>TESTE</xNome><IE>1</IE><CRT>3</CRT></emit>
+      <dest><CNPJ>22222222000122</CNPJ><xNome>DEST</xNome><IE>2</IE><enderDest><UF>RJ</UF></enderDest></dest>
+      <transp>
+        <modFrete>1</modFrete>
+        <veicTransp>
+          <placa>ABC1234</placa>
+          <UF>SP</UF>
+          <RNTC>123456</RNTC>
+        </veicTransp>
+      </transp>
+    </infNFe>
+  </NFe>
+</enviNFe>";
+
+    private static string NfeWithVolumes() => @"<?xml version=""1.0"" encoding=""utf-8""?>
+<enviNFe versao=""4.00"" xmlns=""http://www.portalfiscal.inf.br/nfe"">
+  <NFe xmlns=""http://www.portalfiscal.inf.br/nfe"">
+    <infNFe Id=""NFeTeste"" versao=""4.00"">
+      <ide><mod>55</mod><serie>1</serie><nNF>1</nNF><cUF>21</cUF><natOp>VENDA</natOp><dhEmi>2026-07-18</dhEmi><tpNF>1</tpNF><idDest>1</idDest><cMunFG>2111300</cMunFG><tpAmb>2</tpAmb><finNFe>1</finNFe><indFinal>1</indFinal><indPres>9</indPres></ide>
+      <emit><CNPJ>11111111000111</CNPJ><xNome>TESTE</xNome><IE>1</IE><CRT>3</CRT></emit>
+      <dest><CNPJ>22222222000122</CNPJ><xNome>DEST</xNome><IE>2</IE><enderDest><UF>RJ</UF></enderDest></dest>
+      <transp>
+        <modFrete>1</modFrete>
+        <vol>
+          <qVol>10</qVol>
+          <esp>CAIXA</esp>
+          <marca>M1</marca>
+          <nVol>100/200</nVol>
+          <pesoB>50.000</pesoB>
+          <pesoL>48.000</pesoL>
+        </vol>
+      </transp>
+    </infNFe>
+  </NFe>
+</enviNFe>";
+
+    private static string NfeWithICmsCst() => @"<?xml version=""1.0"" encoding=""utf-8""?>
+<enviNFe versao=""4.00"" xmlns=""http://www.portalfiscal.inf.br/nfe"">
+  <NFe xmlns=""http://www.portalfiscal.inf.br/nfe"">
+    <infNFe Id=""NFeTeste"" versao=""4.00"">
+      <ide><mod>55</mod><serie>1</serie><nNF>1</nNF><cUF>21</cUF><natOp>VENDA</natOp><dhEmi>2026-07-18</dhEmi><tpNF>1</tpNF><idDest>1</idDest><cMunFG>2111300</cMunFG><tpAmb>2</tpAmb><finNFe>1</finNFe><indFinal>1</indFinal><indPres>9</indPres></ide>
+      <emit><CNPJ>11111111000111</CNPJ><xNome>TESTE</xNome><IE>1</IE><CRT>3</CRT></emit>
+      <dest><CNPJ>22222222000122</CNPJ><xNome>DEST</xNome><IE>2</IE><enderDest><UF>RJ</UF></enderDest></dest>
+      <det nItem=""1"">
+        <prod><cProd>001</cProd><xProd>TEST</xProd><NCM>00000000</NCM><CFOP>5102</CFOP><uCom>UN</uCom><qCom>1</qCom><vUnCom>10.00</vUnCom><vProd>10.00</vProd></prod>
+        <imposto>
+          <ICMS>
+            <CST>00</CST>
+            <vBC>10.00</vBC>
+            <vICMS>1.80</vICMS>
+            <pICMS>18.00</pICMS>
+          </ICMS>
+        </imposto>
+      </det>
+    </infNFe>
+  </NFe>
+</enviNFe>";
+
+    private static string NfeWithIpiCst() => @"<?xml version=""1.0"" encoding=""utf-8""?>
+<enviNFe versao=""4.00"" xmlns=""http://www.portalfiscal.inf.br/nfe"">
+  <NFe xmlns=""http://www.portalfiscal.inf.br/nfe"">
+    <infNFe Id=""NFeTeste"" versao=""4.00"">
+      <ide><mod>55</mod><serie>1</serie><nNF>1</nNF><cUF>21</cUF><natOp>VENDA</natOp><dhEmi>2026-07-18</dhEmi><tpNF>1</tpNF><idDest>1</idDest><cMunFG>2111300</cMunFG><tpAmb>2</tpAmb><finNFe>1</finNFe><indFinal>1</indFinal><indPres>9</indPres></ide>
+      <emit><CNPJ>11111111000111</CNPJ><xNome>TESTE</xNome><IE>1</IE><CRT>3</CRT></emit>
+      <dest><CNPJ>22222222000122</CNPJ><xNome>DEST</xNome><IE>2</IE><enderDest><UF>RJ</UF></enderDest></dest>
+      <det nItem=""1"">
+        <prod><cProd>001</cProd><xProd>TEST</xProd><NCM>00000000</NCM><CFOP>5102</CFOP><uCom>UN</uCom><qCom>1</qCom><vUnCom>10.00</vUnCom><vProd>10.00</vProd></prod>
+        <imposto>
+          <IPI>
+            <CST>50</CST>
+            <vIPI>0.50</vIPI>
+            <pIPI>5.00</pIPI>
+          </IPI>
+        </imposto>
+      </det>
     </infNFe>
   </NFe>
 </enviNFe>";

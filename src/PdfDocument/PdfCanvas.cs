@@ -172,33 +172,8 @@ public class PdfCanvas
                 $"Column count ({cols}) does not match provided widths ({colWidths.Length}).",
                 nameof(colWidths));
 
-        double totalWidth = colWidths.Sum();
-
-        // Horizontal lines
-        for (int r = 0; r <= rows; r++)
-            DrawLine(x, y + r * rowHeight, x + totalWidth, y + r * rowHeight);
-
-        // Vertical lines
-        double currentX = x;
-        for (int c = 0; c <= cols; c++)
-        {
-            DrawLine(currentX, y, currentX, y + rows * rowHeight);
-            if (c < cols) currentX += colWidths[c];
-        }
-
-        // Text
-        for (int r = 0; r < rows; r++)
-        {
-            currentX = x;
-            for (int c = 0; c < cols; c++)
-            {
-                TextAlign align = r == 0 ? headerAlign : dataAlign;
-                DrawTextAligned(
-                    data[r, c], currentX, y + r * rowHeight,
-                    colWidths[c], rowHeight, align, fontSize);
-                currentX += colWidths[c];
-            }
-        }
+        DrawTableGrid(x, y, rows, cols, colWidths, rowHeight);
+        DrawTableText(data, x, y, rows, cols, colWidths, rowHeight, headerAlign, dataAlign, fontSize);
     }
 
     // ── Barcode ──────────────────────────────────────────────────────
@@ -220,6 +195,43 @@ public class PdfCanvas
 
     /// <summary>Returns all accumulated PDF command content.</summary>
     public string GetContent() => _cmds.ToString();
+
+    /// <summary>Draws the horizontal and vertical lines of a table grid.</summary>
+    private void DrawTableGrid(double x, double y, int rows, int cols, double[] colWidths, double rowHeight)
+    {
+        double totalWidth = colWidths.Sum();
+
+        // Horizontal lines
+        for (int r = 0; r <= rows; r++)
+            DrawLine(x, y + r * rowHeight, x + totalWidth, y + r * rowHeight);
+
+        // Vertical lines
+        double currentX = x;
+        for (int c = 0; c <= cols; c++)
+        {
+            DrawLine(currentX, y, currentX, y + rows * rowHeight);
+            if (c < cols) currentX += colWidths[c];
+        }
+    }
+
+    /// <summary>Draws the text cells of a table.</summary>
+    private void DrawTableText(string[,] data, double x, double y, int rows, int cols,
+        double[] colWidths, double rowHeight, TextAlign headerAlign, TextAlign dataAlign, double fontSize)
+    {
+        double currentX;
+        for (int r = 0; r < rows; r++)
+        {
+            currentX = x;
+            for (int c = 0; c < cols; c++)
+            {
+                TextAlign align = r == 0 ? headerAlign : dataAlign;
+                DrawTextAligned(
+                    data[r, c], currentX, y + r * rowHeight,
+                    colWidths[c], rowHeight, align, fontSize);
+                currentX += colWidths[c];
+            }
+        }
+    }
 
     /// <summary>
     /// Escapes a string for use in PDF text operators,

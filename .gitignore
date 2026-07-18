@@ -18,6 +18,10 @@ packages/
 # BenchmarkDotNet artifacts
 BenchmarkDotNet.Artifacts/
 
+# Test coverage results
+TestResults/
+TestResults2/
+
 # Build results
 [Dd]ebug/
 [Rr]elease/
