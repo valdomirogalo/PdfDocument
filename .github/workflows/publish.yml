@@ -1,0 +1,44 @@
+name: Publish NuGet Package
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Pack
+        run: dotnet pack src/PdfDocument/PdfDocument.csproj --configuration Release --no-build --output ./nupkg
+
+      - name: Push to GitHub Packages
+        env:
+          # Prefer a Personal Access Token (PAT) over GITHUB_TOKEN because the latter
+          # may lack `write:packages` scope depending on org settings. Create a classic
+          # PAT with `write:packages` scope at https://github.com/settings/tokens and
+          # add it as a repository secret named NUGET_API_KEY.
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY || secrets.GITHUB_TOKEN }}
+        run: |
+          dotnet nuget push "./nupkg/*.nupkg" \
+            --api-key "$NUGET_API_KEY" \
+            --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
+            --skip-duplicate
