@@ -10,6 +10,7 @@ Includes a complete NFe XML parser for DANFE (Brazilian electronic invoice auxil
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![NuGet](https://img.shields.io/badge/NuGet-1.0.0-blue)](https://www.nuget.org/packages/PdfDocument)
 [![c6g.large](https://img.shields.io/badge/arch-c6g.large%20arm64-orange)]()
+[![.NET](https://github.com/valdomirogalo/PdfDocument/actions/workflows/dotnet.yml/badge.svg)](https://github.com/valdomirogalo/PdfDocument/actions/workflows/dotnet.yml)
 
 ---
 
