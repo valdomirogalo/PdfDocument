@@ -1,4 +1,4 @@
-# 📄 PdfDocument — PDF Generation with DANFE and Barcode Support
+# 📄 PDF Generation with DANFE and Barcode Support
 
 **.NET 10 library for generating PDF documents from code.**  
 Render text, shapes, tables, JPEG images and barcodes (Code 39 / EAN-13).  
