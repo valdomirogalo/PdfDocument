@@ -10,6 +10,9 @@ using PdfDocument.NFe;
 
 string? xmlFile = args.Length > 0 ? args[0] : "nfe-sem-rtc.xml";
 
+var nfeParser = new NFeParser();
+var nfeRenderer = new NFeRenderer();
+
 Console.WriteLine("═══ PdfDocument Playground ═══");
 Console.WriteLine();
 
@@ -49,8 +52,8 @@ if (File.Exists(xmlFile))
 {
     try
     {
-        var nfeData = NFeParser.Parse(xmlFile);
-        NFeRenderer.RenderToFile(nfeData, "exemplo_danfe.pdf");
+        var nfeData = nfeParser.Parse(xmlFile);
+        nfeRenderer.Render(nfeData, "exemplo_danfe.pdf");
         Console.WriteLine("   ✅ exemplo_danfe.pdf created");
     }
     catch (Exception ex)
@@ -71,7 +74,7 @@ if (File.Exists(xmlFile))
 {
     try
     {
-        var nfeData = NFeParser.Parse(xmlFile);
+        var nfeData = nfeParser.Parse(xmlFile);
         GenerateEnhancedDanfe(nfeData, "exemplo_danfe_enhanced.pdf");
         Console.WriteLine("   ✅ exemplo_danfe_enhanced.pdf created");
     }

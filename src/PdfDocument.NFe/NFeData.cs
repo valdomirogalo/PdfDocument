@@ -1,10 +1,12 @@
+using PdfDocument;
+
 namespace PdfDocument.NFe;
 
 /// <summary>
 /// Data extracted from a Nota Fiscal Eletrônica (NFe) XML for DANFE generation.
 /// Expanded to support full DANFE reference layout.
 /// </summary>
-public sealed record NFeData
+public sealed record NFeData : IPdfData
 {
     // ── Identification ───────────────────────────────────────────────
     public string CUf { get; init; } = "";

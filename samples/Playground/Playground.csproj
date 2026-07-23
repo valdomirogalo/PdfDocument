@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\PdfDocument\PdfDocument.csproj" />
+    <ProjectReference Include="..\..\src\PdfDocument.NFe\PdfDocument.NFe.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

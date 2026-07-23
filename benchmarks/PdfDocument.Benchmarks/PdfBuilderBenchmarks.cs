@@ -11,6 +11,7 @@ namespace PdfDocument.Benchmarks;
 [MinColumn, MaxColumn, MeanColumn]
 public class PdfBuilderBenchmarks
 {
+    private readonly NFeRenderer _nfeRenderer = new();
     private string _outputDir = "";
 
     [IterationSetup]
@@ -116,7 +117,7 @@ public class PdfBuilderBenchmarks
     {
         string path = Path.Combine(_outputDir, "danfe.pdf");
         var data = CreateNFeData();
-        NFe.NFeRenderer.RenderToFile(data, path);
+        _nfeRenderer.Render(data, path);
         return path;
     }
 

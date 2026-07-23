@@ -12,6 +12,7 @@ namespace PdfDocument.Benchmarks;
 [MinColumn, MaxColumn, MeanColumn]
 public class NFeParserBenchmarks
 {
+    private readonly NFeParser _parser = new();
     private string _xmlPath = "";
 
     [IterationSetup]
@@ -32,18 +33,18 @@ public class NFeParserBenchmarks
     [Benchmark(Description = "NFeParser.Parse (full)")]
     public NFeData Parse_Full()
     {
-        return NFe.NFeParser.Parse(_xmlPath);
+        return _parser.Parse(_xmlPath);
     }
 
     [Benchmark(Description = "NFeParser.Parse (missing fields)")]
-    public static NFeData Parse_MissingFields()
+    public NFeData Parse_MissingFields()
     {
         // Creates another XML with missing fields
         string temp = Path.GetTempFileName();
         try
         {
             File.WriteAllText(temp, MinimalNfeXml());
-            return NFe.NFeParser.Parse(temp);
+            return _parser.Parse(temp);
         }
         finally
         {

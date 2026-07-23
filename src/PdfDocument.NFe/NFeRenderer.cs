@@ -1,9 +1,11 @@
+using PdfDocument;
+
 namespace PdfDocument.NFe;
 
 /// <summary>
 /// Renders NFe data into a PDF document (DANFE).
 /// </summary>
-public static class NFeRenderer
+public sealed class NFeRenderer : ILayoutRenderer<NFeData>
 {
     /// <summary>
     /// Generates a DANFE PDF from NFe data and saves it to the specified path.
@@ -11,7 +13,7 @@ public static class NFeRenderer
     /// <param name="data">NFe data extracted from XML.</param>
     /// <param name="outputPath">Output PDF file path.</param>
     /// <exception cref="ArgumentNullException">If any parameter is null.</exception>
-    public static void RenderToFile(NFeData data, string outputPath)
+    public void Render(NFeData data, string outputPath)
     {
         ArgumentNullException.ThrowIfNull(data);
         ArgumentNullException.ThrowIfNull(outputPath);
@@ -20,18 +22,18 @@ public static class NFeRenderer
         var page = pdf.AddPage();
         var canvas = page.Canvas;
 
-        double x = PdfConstants.DefaultMarginX;
-        double y = PdfConstants.DefaultMarginY;
+        double x = NFeConstants.DefaultMarginX;
+        double y = NFeConstants.DefaultMarginY;
 
         // ── Header ──────────────────────────────────────────────────────
         canvas.DrawText(
             "DANFE - Documento Auxiliar da Nota Fiscal Eletrônica",
-            x, y, PdfConstants.TitleFontSize);
-        y -= PdfConstants.TitleSpacing;
+            x, y, NFeConstants.TitleFontSize);
+        y -= NFeConstants.TitleSpacing;
 
         // Divider line
-        canvas.DrawLine(x, y, PdfConstants.PageWidth, y);
-        y -= PdfConstants.DividerSpacing;
+        canvas.DrawLine(x, y, NFeConstants.PageWidth, y);
+        y -= NFeConstants.DividerSpacing;
 
         // ── NFe data ────────────────────────────────────────────────────
         DrawInfoLine(canvas, ref y, $"Natureza da Operação: {data.NatOp}");
@@ -40,7 +42,7 @@ public static class NFeRenderer
         DrawInfoLine(canvas, ref y,
             $"Tipo: {data.TpNf}   Destino: {data.IdDest}   Ambiente: {data.TpAmb}");
 
-        y -= PdfConstants.SectionSpacing;
+        y -= NFeConstants.SectionSpacing;
 
         // ── Issuer ──────────────────────────────────────────────────────
         DrawSection(canvas, ref y, "--- EMITENTE ---");
@@ -50,7 +52,7 @@ public static class NFeRenderer
             $"{data.EmitXLogr}, {data.EmitNro} - {data.EmitXBairro} - {data.EmitXMun}/{data.EmitUf}");
         DrawInfoLine(canvas, ref y, $"IE: {data.EmitIe}   CRT: {data.EmitCrt}");
 
-        y -= PdfConstants.SectionSpacing;
+        y -= NFeConstants.SectionSpacing;
 
         // ── Recipient ───────────────────────────────────────────────────
         DrawSection(canvas, ref y, "--- DESTINATÁRIO ---");
@@ -60,7 +62,7 @@ public static class NFeRenderer
             $"{data.DestXLogr}, {data.DestNro} - {data.DestXBairro} - {data.DestXMun}/{data.DestUf}");
         DrawInfoLine(canvas, ref y, $"IE: {data.DestIe}");
 
-        y -= PdfConstants.SectionSpacing;
+        y -= NFeConstants.SectionSpacing;
 
         // ── Product ─────────────────────────────────────────────────────
         DrawSection(canvas, ref y, "--- PRODUTO ---");
@@ -69,34 +71,34 @@ public static class NFeRenderer
             $"NCM: {data.Ncm}   CFOP: {data.Cfop}   Quantidade: {data.QCom} {data.UCom}");
         DrawInfoLine(canvas, ref y, $"Valor Unit.: {data.VUnCom}   Valor Total: {data.VProd}");
 
-        y -= PdfConstants.SectionSpacing;
+        y -= NFeConstants.SectionSpacing;
 
         // ── Totals ──────────────────────────────────────────────────────
         DrawSection(canvas, ref y, "--- TOTAIS ---");
         DrawInfoLine(canvas, ref y, $"Base de Cálculo ICMS: {data.VBc}   ICMS: {data.VIcms}");
         DrawInfoLine(canvas, ref y, $"Valor dos Produtos: {data.VProdTotal}   Valor da NF: {data.VNf}");
 
-        y -= PdfConstants.SectionSpacing;
+        y -= NFeConstants.SectionSpacing;
 
         // ── Carrier ─────────────────────────────────────────────────────
         DrawSection(canvas, ref y, "--- TRANSPORTADORA ---");
         DrawInfoLine(canvas, ref y, $"CNPJ: {data.TransCnpj}   {data.TransXNome}");
         DrawInfoLine(canvas, ref y, $"{data.TransXEnder} - {data.TransXMun}/{data.TransUf}");
 
-        y -= PdfConstants.SectionSpacing;
+        y -= NFeConstants.SectionSpacing;
 
         // ── Payment ─────────────────────────────────────────────────────
         DrawSection(canvas, ref y, "--- PAGAMENTO ---");
         DrawInfoLine(canvas, ref y, $"Forma: {data.TPag}   Valor: {data.VPag}");
 
-        y -= PdfConstants.SectionSpacing;
+        y -= NFeConstants.SectionSpacing;
 
         // ── Footer ──────────────────────────────────────────────────────
-        canvas.DrawLine(x, y + PdfConstants.FooterLineSpacing, PdfConstants.PageWidth, y + PdfConstants.FooterLineSpacing);
-        y -= PdfConstants.FooterLineSpacing;
+        canvas.DrawLine(x, y + NFeConstants.FooterLineSpacing, NFeConstants.PageWidth, y + NFeConstants.FooterLineSpacing);
+        y -= NFeConstants.FooterLineSpacing;
         canvas.DrawText(
             "Documento gerado em ambiente de homologação - Sem valor fiscal",
-            x, y, PdfConstants.FooterFontSize);
+            x, y, NFeConstants.FooterFontSize);
 
         pdf.Save(outputPath);
     }
@@ -106,8 +108,8 @@ public static class NFeRenderer
     /// </summary>
     private static void DrawInfoLine(PdfCanvas canvas, ref double y, string text)
     {
-        canvas.DrawText(text, PdfConstants.DefaultMarginX, y, PdfConstants.DefaultFontSize);
-        y -= PdfConstants.DefaultLineHeight;
+        canvas.DrawText(text, NFeConstants.DefaultMarginX, y, NFeConstants.DefaultFontSize);
+        y -= NFeConstants.DefaultLineHeight;
     }
 
     /// <summary>
@@ -115,7 +117,7 @@ public static class NFeRenderer
     /// </summary>
     private static void DrawSection(PdfCanvas canvas, ref double y, string title)
     {
-        canvas.DrawText(title, PdfConstants.DefaultMarginX, y, PdfConstants.SectionFontSize);
-        y -= PdfConstants.DefaultLineHeight;
+        canvas.DrawText(title, NFeConstants.DefaultMarginX, y, NFeConstants.SectionFontSize);
+        y -= NFeConstants.DefaultLineHeight;
     }
 }

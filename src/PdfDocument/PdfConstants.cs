@@ -20,21 +20,7 @@ internal static class PdfConstants
     internal const double TextVerticalAdjust = 0.3;
     internal const int MaxTextLength = 32768;
 
-    // ── Default positioning (DANFE) ───────────────────────────────────
-    internal const double DefaultMarginX = 40.0;
-    internal const double DefaultMarginY = 720.0;
-    internal const double DefaultLineHeight = 14.0;
-    internal const double DefaultFontSize = 9.0;
-    internal const double TitleFontSize = 14.0;
-    internal const double SectionFontSize = 11.0;
-    internal const double FooterFontSize = 8.0;
-    internal const double PageWidth = 560.0; // Usable page width
 
-    // ── DANFE spacing ─────────────────────────────────────────────────
-    internal const double TitleSpacing = 25.0;
-    internal const double DividerSpacing = 15.0;
-    internal const double SectionSpacing = 18.0;
-    internal const double FooterLineSpacing = 10.0;
 
     // ── Barcode Code 39 ───────────────────────────────────────────────
     internal const int BarBlackWidth = 3;

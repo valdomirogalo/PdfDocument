@@ -7,6 +7,7 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/PdfDocument/PdfDocument.csproj" />
+    <Project Path="src/PdfDocument.NFe/PdfDocument.NFe.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/PdfDocument.Tests/PdfDocument.Tests.csproj" />
