@@ -1,5 +1,6 @@
 using System.Xml.Linq;
 using System.Xml;
+using PdfDocument;
 
 namespace PdfDocument.NFe;
 
@@ -9,14 +10,56 @@ namespace PdfDocument.NFe;
 /// Uses XDocument (LINQ to XML) instead of XmlDocument for lower memory
 /// footprint and faster queries — no XPath overhead per field.
 /// </summary>
-public static class NFeParser
+public sealed class NFeParser : IDataParser<NFeData>
 {
     private static readonly XNamespace Ns = "http://www.portalfiscal.inf.br/nfe";
 
     /// <summary>
+    /// Checks whether this parser can handle the given file.
+    /// Returns true for .xml files that contain NFe namespace.
+    /// </summary>
+    public bool CanParse(string inputPath)
+    {
+        if (string.IsNullOrEmpty(inputPath))
+            return false;
+
+        if (!File.Exists(inputPath))
+            return false;
+
+        // Quick check: only accept .xml extension
+        if (!inputPath.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        // Deeper check: verify it contains NFe namespace
+        try
+        {
+            using var reader = XmlReader.Create(inputPath, new XmlReaderSettings
+            {
+                DtdProcessing = DtdProcessing.Prohibit,
+                XmlResolver = null
+            });
+            while (reader.Read())
+            {
+                if (reader.NodeType == XmlNodeType.Element)
+                {
+                    return reader.NamespaceURI == Ns.NamespaceName
+                        || reader.Name == "NFe"
+                        || reader.Name == "infNFe";
+                }
+            }
+        }
+        catch
+        {
+            return false;
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// Loads and extracts data from an NFe XML file.
     /// </summary>
-    public static NFeData Parse(string xmlPath)
+    public NFeData Parse(string xmlPath)
     {
         ArgumentNullException.ThrowIfNull(xmlPath);
 

@@ -4,6 +4,8 @@ namespace PdfDocument.Tests;
 
 public sealed class NFeRendererTests
 {
+    private readonly NFeRenderer _renderer = new();
+
     private static NFeData CreateSampleData()
     {
         return new NFeData
@@ -66,7 +68,7 @@ public sealed class NFeRendererTests
         try
         {
             // Act
-            NFeRenderer.RenderToFile(data, tempPath);
+            _renderer.Render(data, tempPath);
 
             // Assert
             var fileInfo = new FileInfo(tempPath);
@@ -89,7 +91,7 @@ public sealed class NFeRendererTests
     public void RenderToFile_ShouldThrow_WhenDataIsNull()
     {
         Assert.Throws<ArgumentNullException>(
-            () => NFeRenderer.RenderToFile(null!, "output.pdf"));
+            () => _renderer.Render(null!, "output.pdf"));
     }
 
     [Fact]
@@ -97,7 +99,7 @@ public sealed class NFeRendererTests
     {
         var data = CreateSampleData();
         Assert.Throws<ArgumentNullException>(
-            () => NFeRenderer.RenderToFile(data, null!));
+            () => _renderer.Render(data, null!));
     }
 
     [Fact]
@@ -110,7 +112,7 @@ public sealed class NFeRendererTests
         try
         {
             // Act
-            NFeRenderer.RenderToFile(data, tempPath);
+            _renderer.Render(data, tempPath);
             string content = File.ReadAllText(tempPath);
 
             // Assert - title appears in PDF content
@@ -135,7 +137,7 @@ public sealed class NFeRendererTests
         try
         {
             // Act
-            NFeRenderer.RenderToFile(data, tempPath);
+            _renderer.Render(data, tempPath);
             string content = File.ReadAllText(tempPath);
 
             // Assert - PDF structure markers

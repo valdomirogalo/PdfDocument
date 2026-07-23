@@ -1,15 +1,18 @@
 using System.Xml;
+using PdfDocument.NFe;
 
 namespace PdfDocument.Tests;
 
 public sealed class NFeParserTests
 {
+    private readonly NFeParser _parser = new();
+
     [Fact]
     public void Parse_ShouldThrow_WhenXmlNotFound()
     {
         // Act & Assert
         Assert.Throws<FileNotFoundException>(() =>
-            NFe.NFeParser.Parse("/caminho/inexistente.xml"));
+            _parser.Parse("/caminho/inexistente.xml"));
     }
 
     [Fact]
@@ -17,7 +20,7 @@ public sealed class NFeParserTests
     {
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
-            NFe.NFeParser.Parse(null!));
+            _parser.Parse(null!));
     }
 
     [Fact]
@@ -30,7 +33,7 @@ public sealed class NFeParserTests
         try
         {
             // Act
-            var data = NFe.NFeParser.Parse(tempXml);
+            var data = _parser.Parse(tempXml);
 
             // Assert
             Assert.NotNull(data);
@@ -56,7 +59,7 @@ public sealed class NFeParserTests
         try
         {
             // Act
-            var data = NFe.NFeParser.Parse(tempXml);
+            var data = _parser.Parse(tempXml);
 
             // Assert
             Assert.Equal("11111111000111", data.EmitCnpj);
@@ -80,7 +83,7 @@ public sealed class NFeParserTests
         try
         {
             // Act
-            var data = NFe.NFeParser.Parse(tempXml);
+            var data = _parser.Parse(tempXml);
 
             // Assert
             Assert.Equal("22222222000122", data.DestCnpj);
@@ -103,7 +106,7 @@ public sealed class NFeParserTests
         try
         {
             // Act
-            var data = NFe.NFeParser.Parse(tempXml);
+            var data = _parser.Parse(tempXml);
 
             // Assert
             Assert.Equal("96485451", data.CProd);
@@ -131,7 +134,7 @@ public sealed class NFeParserTests
         try
         {
             // Act
-            var data = NFe.NFeParser.Parse(tempXml);
+            var data = _parser.Parse(tempXml);
 
             // Assert
             Assert.Equal("0.00", data.VBc);
@@ -155,7 +158,7 @@ public sealed class NFeParserTests
         try
         {
             // Act
-            var data = NFe.NFeParser.Parse(tempXml);
+            var data = _parser.Parse(tempXml);
 
             // Assert
             Assert.Equal("33333333000133", data.TransCnpj);
@@ -178,7 +181,7 @@ public sealed class NFeParserTests
         try
         {
             // Act
-            var data = NFe.NFeParser.Parse(tempXml);
+            var data = _parser.Parse(tempXml);
 
             // Assert
             Assert.Equal("01", data.TPag);
@@ -200,7 +203,7 @@ public sealed class NFeParserTests
         try
         {
             // Act
-            var data = NFe.NFeParser.Parse(tempXml);
+            var data = _parser.Parse(tempXml);
 
             // Assert
             Assert.Empty(data.CUf); // Missing field
@@ -223,7 +226,7 @@ public sealed class NFeParserTests
         {
             // Act & Assert
             Assert.Throws<InvalidOperationException>(() =>
-                NFe.NFeParser.Parse(tempXml));
+                _parser.Parse(tempXml));
         }
         finally
         {
@@ -241,7 +244,7 @@ public sealed class NFeParserTests
         try
         {
             // Act
-            var data = NFe.NFeParser.Parse(tempXml);
+            var data = _parser.Parse(tempXml);
 
             // Assert
             Assert.Equal("123456789012345", data.NProt);
@@ -263,7 +266,7 @@ public sealed class NFeParserTests
         try
         {
             // Act
-            var data = NFe.NFeParser.Parse(tempXml);
+            var data = _parser.Parse(tempXml);
 
             // Assert
             Assert.Equal("Informacoes complementares", data.InfCpl);
@@ -285,7 +288,7 @@ public sealed class NFeParserTests
         try
         {
             // Act
-            var data = NFe.NFeParser.Parse(tempXml);
+            var data = _parser.Parse(tempXml);
 
             // Assert
             Assert.Equal("333333333", data.EmitIeSt);
@@ -306,7 +309,7 @@ public sealed class NFeParserTests
         try
         {
             // Act
-            var data = NFe.NFeParser.Parse(tempXml);
+            var data = _parser.Parse(tempXml);
 
             // Assert
             Assert.Equal("ABC1234", data.TransPlaca);
@@ -329,7 +332,7 @@ public sealed class NFeParserTests
         try
         {
             // Act
-            var data = NFe.NFeParser.Parse(tempXml);
+            var data = _parser.Parse(tempXml);
 
             // Assert
             Assert.Equal("10", data.TransQVol);
@@ -355,7 +358,7 @@ public sealed class NFeParserTests
         try
         {
             // Act
-            var data = NFe.NFeParser.Parse(tempXml);
+            var data = _parser.Parse(tempXml);
 
             // Assert
             Assert.Equal("00", data.Cst);
@@ -376,7 +379,7 @@ public sealed class NFeParserTests
         try
         {
             // Act
-            var data = NFe.NFeParser.Parse(tempXml);
+            var data = _parser.Parse(tempXml);
 
             // Assert
             Assert.Equal("50", data.Cst);
