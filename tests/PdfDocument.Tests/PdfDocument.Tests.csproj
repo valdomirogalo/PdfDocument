@@ -24,4 +24,10 @@
     <ProjectReference Include="..\..\src\PdfDocument.NFe\PdfDocument.NFe.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="..\..\nfe-sem-rtc.xml" Link="nfe-sem-rtc.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>
