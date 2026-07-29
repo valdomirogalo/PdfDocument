@@ -1,12 +1,12 @@
-# 📄 [Wip] PDF Generation with DANFE and Barcode Support
+# 📄 PDF Generation with DANFE, DACTE and Barcode Support
 
 **.NET 10 library for generating PDF documents from code.**  
-Render text, shapes, tables, JPEG images and barcodes (Code 39 / EAN-13).  
-Includes a complete NFe XML parser for DANFE (Brazilian electronic invoice auxiliary document) generation.
+Render text, shapes, tables, JPEG images and barcodes (Code 39 / EAN-13 / Code 128).  
+Plugin-based architecture with NFe/DANFE and CTe/DACTE support — parse Brazilian fiscal XMLs and render their auxiliary documents.
 
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
 [![Build](https://img.shields.io/badge/build-passing-brightgreen)]()
-[![Tests](https://img.shields.io/badge/tests-74%20passed-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-150%20passed-brightgreen)]()
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![NuGet](https://img.shields.io/badge/NuGet-1.0.0-blue)](https://www.nuget.org/packages/PdfDocument)
 [![c6g.large](https://img.shields.io/badge/arch-c6g.large%20arm64-orange)]()
@@ -22,7 +22,7 @@ Includes a complete NFe XML parser for DANFE (Brazilian electronic invoice auxil
 - [Architecture](#-architecture)
 - [API Reference](#-api-reference)
 - [Barcodes](#-barcodes)
-- [DANFE / NFe](#-danfe--nfe)
+- [DANFE / NFe · DACTE / CTe](#-danfe--nfe--dacte--cte)
 - [Playground](#-playground)
 - [Benchmarks](#-benchmarks)
 - [Performance Optimizations](#-performance-optimizations)
@@ -43,7 +43,7 @@ Includes a complete NFe XML parser for DANFE (Brazilian electronic invoice auxil
 | **Size** | ~30 KB |
 | **Dependencies** | 1 (CodePages) |
 | **License** | MIT ⭐ |
-| **Native DANFE** | ✅ Yes |
+| **Native DANFE / DACTE** | ✅ NFe + CTe |
 | **Native Barcode** | ✅ Code39 + EAN13 + Code128 |
 | **.NET 10 native** | ✅ |
 | **Cross‑platform** | ✅ ARM64 / x64 |
@@ -120,13 +120,24 @@ var bars = Code39.Generate("ABC-123");
 canvas.DrawBarcode(bars, 50, 400, 1.5, 40);
 ```
 
-### 4. Generate a DANFE from NFe XML
+### 4. Generate a DANFE/DACTE from fiscal XML (NFe or CTe)
 
 ```csharp
-using PdfDocument.NFe;
+using PdfDocument;
+using PdfDocument.NFe;   // or PdfDocument.CTe
 
-var nfeData = NFeParser.Parse("nfe.xml");
-NFeRenderer.RenderToFile(nfeData, "danfe.pdf");
+var factory = new PdfPluginFactory();
+
+// One-step convenience method
+factory.RegisterParser(new NFeParser());
+factory.RegisterRenderer(new NFeRenderer());
+factory.Generate("nfe.xml", "danfe.pdf");
+
+// Or explicit two-step pipeline with decorators
+factory.RegisterParser(new LoggingDataParser<NFeData>(new NFeParser(), Console.WriteLine));
+factory.RegisterRenderer(new LoggingLayoutRenderer<NFeData>(new NFeRenderer(), Console.WriteLine));
+var data = factory.Parse<NFeData>("nfe.xml");
+factory.Render(data, "danfe.pdf");
 ```
 
 ---
@@ -134,6 +145,17 @@ NFeRenderer.RenderToFile(nfeData, "danfe.pdf");
 ## 🏗️ Architecture
 
 ```
+PdfPluginFactory (Plugin Registry + Routing)
+├── IDataParser<T>          ← Parsers: XML → IPdfData
+│   ├── NFeParser            (PdfDocument.NFe)
+│   └── CTeParser            (PdfDocument.CTe)
+├── ILayoutRenderer<T>      ← Renderers: IPdfData → PDF
+│   ├── NFeRenderer          (PdfDocument.NFe)
+│   └── CTeRenderer          (PdfDocument.CTe)
+└── Decorators (cross-cutting)
+    ├── LoggingDataParser<T>
+    └── LoggingLayoutRenderer<T>
+
 PdfBuilder (Document)
 ├── PdfPage (Page)
 │   └── PdfCanvas (Drawing area)
@@ -144,10 +166,24 @@ PdfBuilder (Document)
 │       └── DrawBarcode
 ├── Code39 (Barcode generator)
 ├── EAN13 (Barcode generator)
-└── NFe/
-    ├── NFeData (Model)
-    ├── NFeParser (XML → NFeData)
-    └── NFeRenderer (NFeData → PDF DANFE)
+└── Code128 (Barcode generator)
+```
+
+### Plugin Pipeline
+
+```
+                     PdfPluginFactory
+                    ┌──────────────────┐
+  input.xml ───────▶│ parser.CanParse? │
+                    │        │         │
+                    │   parser.Parse() │──▶ IPdfData (CTeData / NFeData)
+                    │        │         │
+                    │ renderer.Render()│──▶ output.pdf (DACTE / DANFE)
+                    └──────────────────┘
+
+  Explicit two-step:
+  var data = factory.Parse<CTeData>("cte.xml");   // typed intermediate
+  factory.Render(data, "dacte.pdf");               // separate render step
 ```
 
 ### PDF Generation Flow
@@ -261,36 +297,83 @@ var bars = EAN13.Generate("7891234567895");
 
 ---
 
-## 🧾 DANFE / NFe
+## 🧾 DANFE / NFe · DACTE / CTe
 
-### NFeParser
-
-```csharp
-var data = NFeParser.Parse("nfe-sem-rtc.xml");
-// Returns NFeData with all fields:
-// - Identification (cUF, natOp, mod, serie, nNF, dhEmi...)
-// - Issuer (CNPJ, name, address, IE, CRT...)
-// - Recipient (CNPJ, name, address...)
-// - Product (code, description, NCM, CFOP, qty, price...)
-// - Totals (vBC, vICMS, vProd, vNF...)
-// - Carrier (CNPJ, name, IE, address...)
-// - Payment (method, amount)
-```
-
-### NFeRenderer
+### Plugin Factory — Unified API
 
 ```csharp
-NFeRenderer.RenderToFile(data, "danfe.pdf");
+var factory = new PdfPluginFactory();
+
+// Register plugins (programmatic or assembly scanning)
+factory.RegisterParser(new NFeParser());
+factory.RegisterRenderer(new NFeRenderer());
+factory.RegisterParser(new CTeParser());
+factory.RegisterRenderer(new CTeRenderer());
+
+// Auto-routing: the factory discovers which parser to use via CanParse()
+factory.Generate("nfe.xml", "danfe.pdf");   // → NFeParser + NFeRenderer
+factory.Generate("cte.xml", "dacte.pdf");   // → CTeParser + CTeRenderer
+
+// Explicit pipeline with decorators
+factory.RegisterParser(new LoggingDataParser<CTeData>(new CTeParser(), Console.WriteLine));
+var data = factory.Parse<CTeData>("cte.xml");   // typed CTeData
+factory.Render(data, "dacte.pdf");               // separate render
 ```
 
-Generates a complete DANFE with:
-- Header with NFe data
-- Issuer and Recipient information
-- Product with fiscal details
+### NFeParser (NFe 4.00 XML)
+
+```csharp
+var parser = new NFeParser();
+if (parser.CanParse("nfe.xml"))
+{
+    NFeData data = parser.Parse("nfe.xml");
+    // Returns NFeData with all fields:
+    // - Identification (cUF, natOp, mod, serie, nNF, dhEmi...)
+    // - Issuer (CNPJ, name, address, IE, CRT...)
+    // - Recipient (CNPJ, name, address...)
+    // - Product (code, description, NCM, CFOP, qty, price...)
+    // - Totals (vBC, vICMS, vProd, vNF...)
+    // - Carrier (CNPJ, name, IE, address...)
+    // - Payment (method, amount)
+}
+```
+
+### CTeParser (CTe 3.00 XML)
+
+```csharp
+var parser = new CTeParser();
+if (parser.CanParse("cte.xml"))
+{
+    CTeData data = parser.Parse("cte.xml");
+    // Returns CTeData with all fields:
+    // - Identification (cUF, nCT, dhEmi, modal, tpServ...)
+    // - Route (origin/destination municipalities)
+    // - Issuer — transport company (CNPJ, IE, name, address)
+    // - Sender (CPF/CNPJ, name, address)
+    // - Recipient (CNPJ, IE, name, address)
+    // - Cargo (product, quantity, value)
+    // - Tax documents (type, number, date, value)
+    // - Service values (total, received)
+    // - ICMS tax (CST, Simples Nacional)
+    // - Road transport (RNTRC)
+}
+```
+
+### NFeRenderer / CTeRenderer
+
+```csharp
+var renderer = new CTeRenderer();
+renderer.Render(data, "dacte.pdf");
+```
+
+Generates a complete DACTE/DANFE with:
+- Header with document data
+- Issuer, sender and recipient information
+- Route (origin → destination) for CTe
+- Cargo/document details
 - Tax calculations
-- Carrier and volumes
-- Payment method
-- Additional information
+- Road transport info
+- Additional observations
 
 ### Enhanced DANFE (Playground)
 
@@ -402,7 +485,7 @@ After:   290 KB allocated (string only + pooled buffers)
 
 ## 🧪 Tests
 
-**141 tests** · xUnit · All passing ✅ · **99.86% line coverage** · **97.84% branch coverage**
+**150 tests** · xUnit · All passing ✅
 
 | Suite | Tests | Coverage |
 |-------|-------|----------|
@@ -414,6 +497,7 @@ After:   290 KB allocated (string only + pooled buffers)
 | `PdfConstantsTests` | 12 | `IsValidPdfName` with null/empty, valid names, invalid chars |
 | `NFeParserTests` | 19 | Full parse, missing fields, protocol, adicional, transport, volumes |
 | `NFeRendererTests` | 5 | RenderToFile, null validation, PDF structure |
+| `DanfeValidationTests` | 37 | Full DANFE layout validation, field verification, edge cases |
 
 ```bash
 dotnet test
@@ -503,25 +587,44 @@ PdfDocument/
 ├── README.md                                 # This file
 ├── LICENSE                                   # MIT License
 │
-├── src/PdfDocument/                          # 📚 Main library
-│   ├── PdfDocument.csproj                    #   Target: net10.0, NuGet 1.0.0
+├── src/PdfDocument/                          # 📚 Core library (NuGet 1.0.0)
+│   ├── PdfDocument.csproj                    #   Target: net10.0
 │   ├── PdfDocument.cs                        #   PdfBuilder — PDF construction
-│   ├── PdfPage.cs                            #   Individual page (primary constructor)
-│   ├── PdfCanvas.cs                          #   Drawing canvas (shapes, text, tables)
+│   ├── PdfPage.cs                            #   Individual page
+│   ├── PdfCanvas.cs                          #   Drawing canvas (shapes, text, tables, barcode)
 │   ├── PdfConstants.cs                       #   Named constants + IsValidPdfName
+│   ├── PdfPluginFactory.cs                   #   Plugin registry: Parse<T>() + Render<T>() + Generate()
+│   ├── IDataParser.cs                        #   Interface: XML → IPdfData
+│   ├── ILayoutRenderer.cs                    #   Interface: IPdfData → PDF
+│   ├── IPdfData.cs                           #   Marker interface for data models
 │   ├── Bar.cs                                #   Barcode bar struct
 │   ├── Code39.cs                             #   Code 39 generator
 │   ├── EAN13.cs                              #   EAN-13 generator
-│   └── NFe/                                  #   NFe/DANFE support
-│       ├── NFeData.cs                        #   Data model (record)
-│       ├── NFeParser.cs                      #   XML NFe 4.00 parser (XXE-safe, XDocument)
-│       └── NFeRenderer.cs                    #   DANFE PDF renderer
+│   ├── Code128.cs                            #   Code 128 generator
+│   └── Decorators/                           #   Cross-cutting concerns
+│       ├── LoggingDataParser.cs              #   Logging decorator for IDataParser<T>
+│       └── LoggingLayoutRenderer.cs          #   Logging decorator for ILayoutRenderer<T>
+│
+├── src/PdfDocument.NFe/                      # 🧾 NFe plugin (NuGet PdfDocument.NFe)
+│   ├── PdfDocument.NFe.csproj                #   Target: net10.0
+│   ├── NFeConstants.cs                       #   DANFE layout constants
+│   ├── NFeData.cs                            #   Data model (record, implements IPdfData)
+│   ├── NFeParser.cs                          #   XML NFe 4.00 parser (XXE-safe, XDocument)
+│   └── NFeRenderer.cs                        #   DANFE PDF renderer
+│
+├── src/PdfDocument.CTe/                      # 🚛 CTe plugin (NuGet PdfDocument.CTe)
+│   ├── PdfDocument.CTe.csproj                #   Target: net10.0
+│   ├── CTeConstants.cs                       #   DACTE layout constants
+│   ├── CTeData.cs                            #   Data model (record, implements IPdfData)
+│   ├── CTeParser.cs                          #   XML CTe 3.00 parser (XXE-safe, XDocument)
+│   ├── CTeRenderer.cs                        #   DACTE PDF renderer
+│   └── Sample/                               #   Sample CTe XML and reference PDF
 │
 ├── samples/Playground/                       # 🎮 Usage examples (IsPackable=false)
 │   ├── Playground.csproj
 │   └── Program.cs                            #   6 complete demos
 │
-├── tests/PdfDocument.Tests/                  # 🧪 Unit tests (141) (IsPackable=false)
+├── tests/PdfDocument.Tests/                  # 🧪 Unit tests (150) (IsPackable=false)
 │   ├── PdfDocument.Tests.csproj              #   xUnit + coverlet
 │   ├── PdfCanvasTests.cs                     #   25 tests
 │   ├── Code39Tests.cs                        #   9 tests
@@ -531,6 +634,7 @@ PdfDocument/
 │   ├── PdfConstantsTests.cs                  #   12 tests
 │   ├── NFeParserTests.cs                     #   19 tests
 │   ├── NFeRendererTests.cs                   #   5 tests
+│   └── DanfeValidationTests.cs               #   37 tests
 │
 └── benchmarks/PdfDocument.Benchmarks/        # ⚡ Performance benchmarks (IsPackable=false)
     ├── PdfDocument.Benchmarks.csproj         #   BenchmarkDotNet 0.14.0
@@ -550,10 +654,13 @@ PdfDocument/
 - [x] Basic drawing operations (lines, rectangles, text)
 - [x] Tables with header and data
 - [x] Code 39 and EAN-13 barcodes
+- [x] Code 128 barcodes
 - [x] JPEG image insertion
-- [x] NFe XML parser (4.00)
-- [x] DANFE rendering
-- [x] Unit tests (141) — 99.86% line coverage
+- [x] Plugin architecture (IDataParser<T> + ILayoutRenderer<T> + PdfPluginFactory)
+- [x] NFe XML parser (4.00) + DANFE rendering
+- [x] CTe XML parser (3.00) + DACTE rendering
+- [x] Logging decorators for parser and renderer pipelines
+- [x] Unit tests (150)
 - [x] Performance benchmarks
 - [x] Official DANFE layout with logo
 - [x] NuGet packaging (v1.0.0)
