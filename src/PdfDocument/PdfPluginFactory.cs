@@ -159,10 +159,65 @@ public sealed class PdfPluginFactory
     // ── Generation ─────────────────────────────────────────────────────
 
     /// <summary>
+    /// Parses an input file using the registered parser for type <typeparamref name="T"/>.
+    /// Use this for explicit two-step pipelines where you need the intermediate data model.
+    /// </summary>
+    /// <typeparam name="T">The expected data model type.</typeparam>
+    /// <param name="inputPath">Path to the input file.</param>
+    /// <returns>The strongly-typed data model.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// If no parser registered for <typeparamref name="T"/> can handle the input.
+    /// </exception>
+    public T Parse<T>(string inputPath) where T : IPdfData
+    {
+        ArgumentNullException.ThrowIfNull(inputPath);
+
+        foreach (var parser in _parsers)
+        {
+            if (parser.DataType == typeof(T) && parser.CanParse(inputPath))
+                return (T)parser.Parse(inputPath);
+        }
+
+        throw new InvalidOperationException(
+            $"No parser registered for '{typeof(T).Name}' that can handle '{Path.GetFileName(inputPath)}'. " +
+            "Register one with RegisterParser<T>() or ensure the plugin assembly is loaded.");
+    }
+
+    /// <summary>
+    /// Renders a data model into a PDF using the registered renderer for type <typeparamref name="T"/>.
+    /// Use this for explicit two-step pipelines where you already have the data model.
+    /// </summary>
+    /// <typeparam name="T">The data model type.</typeparam>
+    /// <param name="data">The data model to render.</param>
+    /// <param name="outputPath">Path where the PDF will be saved.</param>
+    /// <exception cref="InvalidOperationException">
+    /// If no renderer is registered for <typeparamref name="T"/>.
+    /// </exception>
+    public void Render<T>(T data, string outputPath) where T : IPdfData
+    {
+        ArgumentNullException.ThrowIfNull(data);
+        ArgumentNullException.ThrowIfNull(outputPath);
+
+        if (_renderers.TryGetValue(typeof(T), out var renderer))
+        {
+            renderer.Render(data, outputPath);
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"No layout renderer registered for data type '{typeof(T).Name}'. " +
+            "Register one with RegisterRenderer<T>() or ensure the plugin assembly is loaded.");
+    }
+
+    /// <summary>
     /// Generates a PDF from an input file. The factory automatically discovers
     /// the appropriate parser (via <see cref="IDataParser{T}.CanParse"/>) and
     /// the matching layout renderer for the parsed data type.
     /// </summary>
+    /// <remarks>
+    /// This is a convenience method that combines <see cref="Parse{T}"/> + <see cref="Render{T}"/>.
+    /// For explicit control over each step, call them individually.
+    /// </remarks>
     /// <param name="inputPath">Path to the input file (XML, JSON, CSV, etc.).</param>
     /// <param name="outputPath">Path where the PDF will be saved.</param>
     /// <exception cref="InvalidOperationException">
