@@ -46,6 +46,6 @@ public class Ean13Benchmarks
     [Benchmark(Description = "EAN13.Generate (first digit 9)")]
     public List<Bar> Generate_FirstDigit9()
     {
-        return EAN13.Generate("9987654321096");
+        return EAN13.Generate("9987654321099");
     }
 }

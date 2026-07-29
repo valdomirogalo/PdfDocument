@@ -411,37 +411,54 @@ Generates 6 sample PDFs:
 
 ## ⚡ Benchmarks
 
-Measured with **BenchmarkDotNet 0.14.0** · .NET 10.0.10 · AMD Ryzen 7 5700U · GC Workstation
+Measured with **BenchmarkDotNet 0.14.0** · .NET 10.0.10 · X64 RyuJIT AVX2 · GC Workstation
 
 ### PdfCanvas — Drawing operation throughput
 
 | Operation | Scale | Mean | Allocated |
 |-----------|-------|------|-----------|
-| **DrawLine** | 1,000 calls | **829 μs** | 230 KB |
-| **DrawLine** | 10,000 calls | **709 ns/op** | 235 B |
-| **DrawRectangle** | 1,000 calls | **746 μs** | 208 KB |
-| **FillRectangle** | 1,000 calls | **768 μs** | 208 KB |
-| **DrawText (ASCII)** | 1,000 calls | **1,325 μs** | 290 KB |
-| **DrawText (Unicode/WinAnsi)** | 1,000 calls | **1,747 μs** | 386 KB |
-| **DrawTextAligned** | 1,000 calls | **1,059 μs** | 255 KB |
-| **DrawCell (with border)** | 1,000 calls | **1,725 μs** | 435 KB |
-| **DrawGrid 10×10** | 1 grid | **17 μs** | — |
-| **DrawGrid 50×50** | 1 grid | **67 μs** | 16 KB |
-| **DrawBarcode (Code39)** | 10 chars | **36 μs** | — |
-| **DrawTable 5×4** | 1 table | **44 μs** | — |
-| **GetContent (1k draws)** | buffer read | **842 μs** | 298 KB |
+| **DrawLine** | 1,000 calls | **823 μs** | 230 KB |
+| **DrawLine** | 10,000 calls | **699 ns/op** | 235 B |
+| **DrawRectangle** | 1,000 calls | **714 μs** | 208 KB |
+| **FillRectangle** | 1,000 calls | **720 μs** | 207 KB |
+| **DrawText (ASCII)** | 1,000 calls | **1,152 μs** | 290 KB |
+| **DrawText (UTF8/WinAnsi)** | 1,000 calls | **1,376 μs** | 386 KB |
+| **DrawTextAligned** | 1,000 calls | **1,001 μs** | 255 KB |
+| **DrawCell (with border)** | 1,000 calls | **1,714 μs** | 435 KB |
+| **DrawGrid 10×10** | 1 grid | **16.3 μs** | — |
+| **DrawGrid 50×50** | 1 grid | **66.8 μs** | 15.2 KB |
+| **DrawBarcode (Code39)** | 10 chars | **33.0 μs** | — |
+| **DrawTable 5×4** | 1 table | **34.7 μs** | — |
+| **GetContent (1k draws)** | buffer read | **815 μs** | 298 KB |
+
+### Barcode generation
+
+| Operation | Mean | Allocated |
+|-----------|------|-----------|
+| **Code39.Generate (10 chars)** | **4.3 μs** | — |
+| **Code39.Generate (50 chars)** | **27.2 μs** | 13.0 KB |
+| **EAN13.Generate (12 digits)** | **450 ns** | 2.47 KB |
+| **EAN13.Generate (13 digits)** | **437 ns** | 2.42 KB |
+| **EAN13.Generate (with hyphens)** | **513 ns** | 2.52 KB |
+
+### NFeParser — XML parsing
+
+| Scenario | Mean | Allocated |
+|----------|------|-----------|
+| Parse full NFe XML | **151 μs** | 34.5 KB |
+| Parse missing fields | **133 μs** | 9.0 KB |
 
 ### PdfBuilder — Complete document generation
 
 | Scenario | Mean | Allocated |
 |----------|------|-----------|
-| 1 empty page | **85 μs** | **18 KB** |
-| 1 page, 100 text lines | **413 μs** | **120 KB** |
-| 1 page, 500 rectangles | **464 μs** | **171 KB** |
-| 1 table 50×6 | **510 μs** | **167 KB** |
-| 5 Code39 barcodes | **277 μs** | **82 KB** |
-| Complete DANFE (NFeRenderer) | **159 μs** | **35 KB** |
-| 10 pages, 50 lines each | **1,321 μs** | **506 KB** |
+| 1 empty page | **66.2 μs** | **18.0 KB** |
+| 1 page, 100 text lines | **330 μs** | **119 KB** |
+| 1 page, 500 rectangles | **434 μs** | **171 KB** |
+| 1 table 50×6 | **481 μs** | **167 KB** |
+| 5 Code39 barcodes | **221 μs** | **81.8 KB** |
+| Complete DANFE (NFeRenderer) | **128 μs** | **34.8 KB** |
+| 10 pages, 50 lines each | **1,119 μs** | **506 KB** |
 
 ### How to run
 

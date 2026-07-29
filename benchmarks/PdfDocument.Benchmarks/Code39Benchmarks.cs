@@ -31,15 +31,15 @@ public class Code39Benchmarks
     // ── Mixed characters ───────────────────────────────────────────────
 
     [Benchmark(Description = "Code39.Generate (10 mixed chars)", OperationsPerInvoke = 100)]
-    public static List<Bar> Generate_Mixed()
+    public List<Bar> Generate_Mixed()
     {
         return Code39.Generate("ABC-123/XYZ");
     }
 
-    // ── With validation (caractere inválido é exceção, não medimos) ───────
+    // ── Long alphanumeric string ─────────────────────────────────────────
 
     [Benchmark(Description = "Code39.Generate (50 alphanumeric)")]
-    public static List<Bar> Generate_Long()
+    public List<Bar> Generate_Long()
     {
         return Code39.Generate("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-.$/+%");
     }
