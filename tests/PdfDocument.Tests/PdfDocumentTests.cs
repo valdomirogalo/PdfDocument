@@ -344,6 +344,38 @@ public sealed class PdfDocumentTests
         finally { File.Delete(tempPath); }
     }
 
+    [Fact]
+    public void Save_WithRotatedPage_ShouldIncludeRotateEntry()
+    {
+        using var pdf = new PdfBuilder();
+        pdf.AddPage(rotation: 90);
+
+        string tempPath = Path.GetTempFileName();
+        try
+        {
+            pdf.Save(tempPath);
+            string content = File.ReadAllText(tempPath);
+            Assert.Contains("/Rotate 90", content);
+        }
+        finally { File.Delete(tempPath); }
+    }
+
+    [Fact]
+    public void Save_WithDefaultPage_ShouldNotIncludeRotate()
+    {
+        using var pdf = new PdfBuilder();
+        pdf.AddPage(); // rotation = 0 (default)
+
+        string tempPath = Path.GetTempFileName();
+        try
+        {
+            pdf.Save(tempPath);
+            string content = File.ReadAllText(tempPath);
+            Assert.DoesNotContain("/Rotate", content);
+        }
+        finally { File.Delete(tempPath); }
+    }
+
     /// <summary>
     /// Creates a minimal valid JPEG file with SOF0 marker.
     /// </summary>

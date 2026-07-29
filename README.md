@@ -685,7 +685,7 @@ PdfDocument/
 - [x] CodePages encoding fix (eliminated exception on first DrawText call)
 - [x] Memory optimizations (ArrayPool, removed _objects leak, XDocument, HashSet)
 - [ ] TrueType font (TTF) support
-- [ ] Page rotation support
+- [x] Page rotation support
 - [ ] PDF/A support
 - [ ] Async API for large documents
 

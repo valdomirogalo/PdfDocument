@@ -22,11 +22,13 @@ public sealed class PdfBuilder : IDisposable
     /// </summary>
     /// <param name="width">Page width in points (default: 612).</param>
     /// <param name="height">Page height in points (default: 792).</param>
+    /// <param name="rotation">Clockwise rotation in degrees (0, 90, 180, or 270). Default: 0.</param>
     /// <returns>The newly created page.</returns>
     public PdfPage AddPage(double width = PdfConstants.DefaultPageWidth,
-                           double height = PdfConstants.DefaultPageHeight)
+                           double height = PdfConstants.DefaultPageHeight,
+                           int rotation = 0)
     {
-        var page = new PdfPage(width, height);
+        var page = new PdfPage(width, height) { Rotation = rotation };
         _pages.Add(page);
         return page;
     }
@@ -116,9 +118,10 @@ public sealed class PdfBuilder : IDisposable
             }
 
             int pageId = AllocateId();
+            string rotateEntry = page.Rotation != 0 ? $" /Rotate {page.Rotation}" : "";
             string pageDict = $"<< /Type /Page /Parent {_pagesId} 0 R " +
                               $"/Contents {contentId} 0 R " +
-                              $"/MediaBox [0 0 {page.Width} {page.Height}] " +
+                              $"/MediaBox [0 0 {page.Width} {page.Height}]{rotateEntry} " +
                               $"/Resources << {resources} >> >>";
             WriteIndirectObject(writer, fs, pageId, pageDict);
             pageIds.Add(pageId);
