@@ -10,7 +10,7 @@
     <NoWarn>$(NoWarn);CS1591;NU1510</NoWarn>
     <Description>CTe (Conhecimento de Transporte Eletrônico) plugin for PdfDocument — XML parser and DACTE renderer.</Description>
     <PackageId>PdfDocument.CTe</PackageId>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
     <Authors>Valdomiro Galo</Authors>
     <Product>PdfDocument.CTe</Product>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>

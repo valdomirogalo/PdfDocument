@@ -10,7 +10,7 @@
     <NoWarn>$(NoWarn);CS1591;NU1510</NoWarn>
     <Description>NFe (Nota Fiscal Eletrônica) plugin for PdfDocument — XML parser and DANFE renderer.</Description>
     <PackageId>PdfDocument.NFe</PackageId>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
     <Authors>Valdomiro Galo</Authors>
     <Product>PdfDocument.NFe</Product>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
