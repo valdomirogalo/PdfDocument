@@ -1,17 +1,21 @@
 using PdfDocument;
 using PdfDocument.NFe;
+using PdfDocument.CTe;
 
 // ─────────────────────────────────────────────────────────────────────────
 //  PLAYGROUND - PdfDocument library usage examples
 // ─────────────────────────────────────────────────────────────────────────
-//  Prerequisite: have an "nfe-sem-rtc.xml" file in the execution directory
-//  or adjust the path below.
+//  Prerequisites: have "nfe-sem-rtc.xml" and "cte.xml" files in the
+//  execution directory or adjust the paths below.
 // ─────────────────────────────────────────────────────────────────────────
 
-string? xmlFile = args.Length > 0 ? args[0] : "nfe-sem-rtc.xml";
+string? nfeXmlFile = args.Length > 0 ? args[0] : "nfe-sem-rtc.xml";
+string? cteXmlFile = args.Length > 1 ? args[1] : "cte.xml";
 
 var nfeParser = new NFeParser();
 var nfeRenderer = new NFeRenderer();
+var cteParser = new CTeParser();
+var cteRenderer = new CTeRenderer();
 
 Console.WriteLine("═══ PdfDocument Playground ═══");
 Console.WriteLine();
@@ -48,11 +52,11 @@ Console.WriteLine("   ✅ exemplo_ean13.pdf created");
 //  5. DANFE EXAMPLE (se XML existir)
 // ─────────────────────────────────────────────────────────────────────────
 Console.WriteLine("5. Gerando DANFE a partir de XML...");
-if (File.Exists(xmlFile))
+if (File.Exists(nfeXmlFile))
 {
     try
     {
-        var nfeData = nfeParser.Parse(xmlFile);
+        var nfeData = nfeParser.Parse(nfeXmlFile);
         nfeRenderer.Render(nfeData, "exemplo_danfe.pdf");
         Console.WriteLine("   ✅ exemplo_danfe.pdf created");
     }
@@ -63,18 +67,18 @@ if (File.Exists(xmlFile))
 }
 else
 {
-    Console.WriteLine($"   ⚠ Arquivo '{xmlFile}' não found. DANFE not generated.");
+    Console.WriteLine($"   ⚠ Arquivo '{nfeXmlFile}' não found. DANFE not generated.");
 }
 
 // ─────────────────────────────────────────────────────────────────────────
 //  6. DANFE ENHANCED - Layout faithful to reference PDF with logo
 // ─────────────────────────────────────────────────────────────────────────
 Console.WriteLine("6. Gerando DANFE enhanced (ref layout + logo)...");
-if (File.Exists(xmlFile))
+if (File.Exists(nfeXmlFile))
 {
     try
     {
-        var nfeData = nfeParser.Parse(xmlFile);
+        var nfeData = nfeParser.Parse(nfeXmlFile);
         GenerateEnhancedDanfe(nfeData, "exemplo_danfe_enhanced.pdf");
         Console.WriteLine("   ✅ exemplo_danfe_enhanced.pdf created");
     }
@@ -85,7 +89,51 @@ if (File.Exists(xmlFile))
 }
 else
 {
-    Console.WriteLine($"   ⚠ Arquivo '{xmlFile}' não found. DANFE enhanced não gerado.");
+    Console.WriteLine($"   ⚠ Arquivo '{nfeXmlFile}' não found. DANFE enhanced não gerado.");
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+//  7. DACTE EXAMPLE (se XML existir)
+// ─────────────────────────────────────────────────────────────────────────
+Console.WriteLine("7. Gerando DACTE a partir de XML...");
+if (File.Exists(cteXmlFile))
+{
+    try
+    {
+        var cteData = cteParser.Parse(cteXmlFile);
+        cteRenderer.Render(cteData, "exemplo_dacte.pdf");
+        Console.WriteLine("   ✅ exemplo_dacte.pdf created");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"   ❌ Erro ao gerar DACTE: {ex.Message}");
+    }
+}
+else
+{
+    Console.WriteLine($"   ⚠ Arquivo '{cteXmlFile}' não found. DACTE not generated.");
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+//  8. DACTE ENHANCED - Layout detailed with barcode, tables and logo
+// ─────────────────────────────────────────────────────────────────────────
+Console.WriteLine("8. Gerando DACTE enhanced (layout detalhado + logo)...");
+if (File.Exists(cteXmlFile))
+{
+    try
+    {
+        var cteData = cteParser.Parse(cteXmlFile);
+        GenerateEnhancedDacte(cteData, "exemplo_dacte_enhanced.pdf");
+        Console.WriteLine("   ✅ exemplo_dacte_enhanced.pdf created");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"   ❌ Error: {ex.Message}");
+    }
+}
+else
+{
+    Console.WriteLine($"   ⚠ Arquivo '{cteXmlFile}' não found. DACTE enhanced não gerado.");
 }
 
 Console.WriteLine();
@@ -574,4 +622,342 @@ static string FormatTime(string isoDate)
 {
     if (string.IsNullOrEmpty(isoDate) || isoDate.Length < 19) return "";
     return isoDate[11..19];
+}
+
+/// <summary>
+/// Gera DACTE com layout detalhado: barcode, tabelas, logo, seguindo o padrão
+/// do documento auxiliar do Conhecimento de Transporte Eletrônico.
+/// </summary>
+static void GenerateEnhancedDacte(CTeData data, string outputPath)
+{
+    const string LogoFile = "logo.jpg";
+
+    using var pdf = new PdfBuilder();
+
+    // ── Registra o logo ─────────────────────────────────────────────────
+    if (File.Exists(LogoFile))
+    {
+        pdf.AddImage("logo", LogoFile);
+        Console.WriteLine("   📷 Logo registered: logo.jpg");
+    }
+    else
+    {
+        Console.WriteLine("   ⚠ 'logo.jpg' não found. Proceeding without logo.");
+    }
+
+    var page = pdf.AddPage(595, 842); // A4
+    var c = page.Canvas;
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  Helpers de layout
+    // ═══════════════════════════════════════════════════════════════════════
+
+    void DrawTableRow(ref double yRef, double rowHeight, string[] texts, double[] colWidths,
+        double startX = 15, double fontSize = 7, PdfCanvas.TextAlign align = PdfCanvas.TextAlign.Left)
+    {
+        double cellBottom = yRef - rowHeight;
+        double x = startX;
+        for (int i = 0; i < texts.Length; i++)
+        {
+            c.DrawCell(texts[i] ?? "", x, cellBottom, colWidths[i], rowHeight, align, fontSize, true);
+            x += colWidths[i];
+        }
+        yRef = cellBottom;
+    }
+
+    void DrawSectionTitle(ref double yRef, string title, double rowHeight = 10, double fontSize = 7)
+    {
+        double cellBottom = yRef - rowHeight;
+        c.DrawCell(title, 15, cellBottom, 560, rowHeight, PdfCanvas.TextAlign.Center, fontSize, true);
+        yRef = cellBottom;
+    }
+
+    const double RowH = 11;
+    const double RowHlabel = 9;
+
+    double y = 820;
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  CABEÇALHO
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // ── (1) LINHA TOPO: "RECEBEMOS DE..." (full width) + CT-e (dir) ──
+    y = 815;
+    c.DrawText($"RECEBEMOS DE {TruncateTo(data.EmitXNome, 40)} OS SERVIÇOS CONSTANTES DO CONHECIMENTO DE TRANSPORTE INDICADO ABAIXO", 15, y, 7);
+    c.DrawText("CT-e", 500, y, 12);
+
+    // ── (2) N° + SÉRIE no canto direito ──────────────────────────────────
+    y = 783;
+    c.DrawText($"N° {data.NCt}", 500, y, 9);
+    y = 773;
+    c.DrawText($"SÉRIE {data.Serie}", 500, y, 8);
+
+    // ── (3) LINHA DE RECEBIMENTO ─────────────────────────────────────────
+    y = 793;
+    c.DrawLine(15, y, 245, y);
+    c.DrawText("DATA DE RECEBIMENTO", 15, y - 8, 6);
+    c.DrawLine(255, y, 430, y);
+    c.DrawText("IDENTIFICAÇÃO E ASSINATURA DO RECEBEDOR", 255, y - 8, 6);
+
+    // ── (4) LOGO + EMITENTE (esq)  |  DACTE (dir) ──────────────────────
+    y = 760;
+
+    // ── Esquerda: logo (60x60) + dados do emitente ──────────────────────
+    if (File.Exists(LogoFile))
+        c.DrawImage("logo", 15, y - 40, 60, 60);
+
+    c.DrawText(TruncateTo(data.EmitXNome, 50), 90, y, 9);
+    y -= 11;
+    c.DrawText($"CNPJ: {FormatCnpj(data.EmitCnpj)}", 90, y, 7);
+    y -= 10;
+    string enderecoLinha1 = $"{data.EmitXLogr}, {data.EmitNro}";
+    c.DrawText(enderecoLinha1, 90, y, 6);
+    y -= 9;
+    c.DrawText($"{data.EmitXBairro} - {data.EmitXMun}/{data.EmitUf}", 90, y, 6);
+    y -= 9;
+    c.DrawText($"CEP: {data.EmitCep}", 90, y, 6);
+
+    // ── Direita: DACTE + CHAVE DE ACESSO + N°/SÉRIE + barcode ────────
+    y = 760;
+    c.DrawText("DACTE", 450, y, 16);
+    c.DrawText("DOCUMENTO AUXILIAR", 400, y - 14, 7);
+    c.DrawText("DO CONHECIMENTO", 410, y - 24, 7);
+    c.DrawText("DE TRANSPORTE", 415, y - 34, 7);
+    c.DrawText("ELETRÔNICO", 420, y - 44, 7);
+
+    // ── Bloco CHAVE DE ACESSO (lado direito) ────────────────────────────
+    c.DrawText("CHAVE DE ACESSO", 360, y - 62, 7);
+
+    // Monta a chave de acesso CTe (44 dígitos)
+    string chaveCte = BuildCTeChave(data);
+    string chaveFormatada = string.Join(" ", Enumerable.Range(0, 11).Select(i =>
+        chaveCte.Length > i * 4 ? chaveCte.Substring(i * 4, Math.Min(4, chaveCte.Length - i * 4)) : ""));
+    c.DrawText(chaveFormatada, 360, y - 74, 6);
+
+    // N°/SÉRIE/FOLHA
+    c.DrawText($"N°{data.NCt}", 470, y - 64, 11);
+    c.DrawText($"SÉRIE {data.Serie}", 470, y - 77, 7);
+    c.DrawText("FOLHA 1/1", 470, y - 87, 7);
+
+    // Barcode abaixo da chave
+    try
+    {
+        string chaveLimpa = chaveCte.Replace(" ", "");
+        var barcodeBars = Code128.Generate(chaveLimpa);
+        c.DrawBarcode(barcodeBars, 360, y - 50, 0.6, 24);
+    }
+    catch { }
+
+    // Consulta abaixo do barcode
+    c.DrawText("Consulta de autenticidade no portal nacional do CT-e", 360, y - 110, 5);
+    c.DrawText("www.cte.fazenda.gov.br/portal ou no site da Sefaz", 360, y - 118, 5);
+    c.DrawText("Autorizadora", 360, y - 126, 5);
+
+    // ── (5) SEPARADOR HORIZONTAL ─────────────────────────────────────────
+    y = y - 130;
+    c.DrawLine(15, y, 575, y);
+    y -= 3;
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  SEÇÕES EM TABELA
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // ── DADOS DO CT-e ────────────────────────────────────────────────────
+    DrawSectionTitle(ref y, "DADOS DO CONHECIMENTO DE TRANSPORTE");
+
+    DrawTableRow(ref y, RowHlabel,
+        ["NATUREZA DA OPERAÇÃO", "MODELO", "SÉRIE", "NÚMERO", "DATA DE EMISSÃO"],
+        [150, 70, 70, 120, 150], fontSize: 5);
+    DrawTableRow(ref y, RowH,
+        [TruncateTo(data.NatOp, 22), data.Mod, data.Serie, data.NCt, FormatDate(data.DhEmi)],
+        [150, 70, 70, 120, 150]);
+
+    DrawTableRow(ref y, RowHlabel,
+        ["TIPO CT-e", "MODAL", "TIPO DE SERVIÇO", "AMBIENTE", "RETIRA"],
+        [90, 90, 110, 110, 160], fontSize: 5);
+    string tpCteDesc = data.TpCte switch { "0" => "0 - Normal", "1" => "1 - Complemento", "3" => "3 - Substituição", _ => data.TpCte };
+    string modalDesc = data.Modal switch { "01" => "01 - Rodoviário", "02" => "02 - Aéreo", "03" => "03 - Aquaviário", "04" => "04 - Ferroviário", "05" => "05 - Dutoviário", "06" => "06 - Multimodal", _ => data.Modal };
+    string tpServDesc = data.TpServ switch { "0" => "0 - Normal", "1" => "1 - Subcontratação", "2" => "2 - Redespacho", "3" => "3 - Redespacho Interm.", "4" => "4 - Serviço Vinculado", _ => data.TpServ };
+    string retiraDesc = data.Retira == "1" ? "1 - Sim" : "0 - Não";
+    DrawTableRow(ref y, RowH,
+        [tpCteDesc, modalDesc, tpServDesc, data.TpAmb == "1" ? "1 - Produção" : "2 - Homologação", retiraDesc],
+        [90, 90, 110, 110, 160]);
+
+    DrawTableRow(ref y, RowHlabel,
+        ["CFOP", "MUNICÍPIO EMISSÃO", "UF EMISSÃO", "PROC. EMISSÃO", "VERSÃO PROCESSO"],
+        [60, 180, 60, 110, 150], fontSize: 5);
+    DrawTableRow(ref y, RowH,
+        [data.Cfop, $"{data.XMunEnv}/{data.UFEnv}", data.UFEnv, data.ProcEmi, data.VerProc],
+        [60, 180, 60, 110, 150]);
+
+    // ── INSCRIÇÃO ESTADUAL DO EMITENTE ───────────────────────────────────
+    DrawSectionTitle(ref y, "INSCRIÇÃO ESTADUAL DO EMITENTE");
+
+    DrawTableRow(ref y, RowHlabel,
+        ["INSCRIÇÃO ESTADUAL", "CNPJ", "TOMADOR DO SERVIÇO", "INDICADOR IE TOMADOR"],
+        [160, 170, 130, 100], fontSize: 5);
+    string tomaDesc = data.Toma switch { "0" => "0 - Remetente", "1" => "1 - Expedidor", "2" => "2 - Recebedor", "3" => "3 - Destinatário", "4" => "4 - Outros", _ => data.Toma };
+    string indIETomaDesc = data.IndIEToma switch { "1" => "1 - Contrib. ICMS", "2" => "2 - Contrib. Isento", "9" => "9 - Não Contrib.", _ => data.IndIEToma };
+    DrawTableRow(ref y, RowH,
+        [data.EmitIe, FormatCnpj(data.EmitCnpj), tomaDesc, indIETomaDesc],
+        [160, 170, 130, 100]);
+
+    // ── REMETENTE ────────────────────────────────────────────────────────
+    DrawSectionTitle(ref y, "REMETENTE");
+
+    DrawTableRow(ref y, RowHlabel,
+        ["NOME/RAZÃO SOCIAL", "CPF/CNPJ", "INSCRIÇÃO ESTADUAL"],
+        [360, 100, 100], fontSize: 5);
+    DrawTableRow(ref y, RowH,
+        [TruncateTo(data.RemXNome, 45), FormatCpfCnpj(data.RemCpfCnpj), data.RemIe],
+        [360, 100, 100]);
+
+    DrawTableRow(ref y, RowHlabel,
+        ["ENDEREÇO", "BAIRRO / DISTRITO", "CEP", "MUNICÍPIO", "UF"],
+        [200, 130, 70, 110, 50], fontSize: 5);
+    DrawTableRow(ref y, RowH,
+        [$"{data.RemXLogr}, {data.RemNro}", data.RemXBairro, data.RemCep, data.RemXMun, data.RemUf],
+        [200, 130, 70, 110, 50]);
+
+    // ── DESTINATÁRIO ─────────────────────────────────────────────────────
+    DrawSectionTitle(ref y, "DESTINATÁRIO");
+
+    DrawTableRow(ref y, RowHlabel,
+        ["NOME/RAZÃO SOCIAL", "CNPJ/CPF", "INSCRIÇÃO ESTADUAL"],
+        [360, 100, 100], fontSize: 5);
+    DrawTableRow(ref y, RowH,
+        [TruncateTo(data.DestXNome, 45), FormatCpfCnpj(data.DestCnpj), data.DestIe],
+        [360, 100, 100]);
+
+    DrawTableRow(ref y, RowHlabel,
+        ["ENDEREÇO", "BAIRRO / DISTRITO", "CEP", "MUNICÍPIO", "UF"],
+        [200, 130, 70, 110, 50], fontSize: 5);
+    DrawTableRow(ref y, RowH,
+        [$"{data.DestXLogr}, {data.DestNro}", data.DestXBairro, data.DestCep, data.DestXMun, data.DestUf],
+        [200, 130, 70, 110, 50]);
+
+    // ── PERCURSO ─────────────────────────────────────────────────────────
+    y -= 4;
+    DrawSectionTitle(ref y, "PERCURSO");
+
+    DrawTableRow(ref y, RowHlabel,
+        ["ORIGEM (MUNICÍPIO / UF)", "DESTINO (MUNICÍPIO / UF)", "MUNICÍPIO DE ENVIO"],
+        [187, 187, 186], fontSize: 5);
+    DrawTableRow(ref y, RowH,
+        [$"{data.XMunIni}/{data.UFIni}", $"{data.XMunFim}/{data.UFFim}", $"{data.XMunEnv}/{data.UFEnv}"],
+        [187, 187, 186]);
+
+    // ── CARGA ────────────────────────────────────────────────────────────
+    y -= 4;
+    DrawSectionTitle(ref y, "CARGA");
+
+    DrawTableRow(ref y, RowHlabel,
+        ["PRODUTO PREDOMINANTE", "CATEGORIA", "VALOR DA CARGA"],
+        [230, 160, 170], fontSize: 5);
+    DrawTableRow(ref y, RowH,
+        [data.ProPred, data.XOutCat, data.VCarga],
+        [230, 160, 170]);
+
+    DrawTableRow(ref y, RowHlabel,
+        ["QUANTIDADE", "UNIDADE DE MEDIDA", "CÓDIGO UNIDADE"],
+        [170, 200, 190], fontSize: 5);
+    DrawTableRow(ref y, RowH,
+        [data.QCarga, data.TpMed, data.CUnid],
+        [170, 200, 190]);
+
+    // ── DOCUMENTOS FISCAIS ───────────────────────────────────────────────
+    y -= 4;
+    DrawSectionTitle(ref y, "DOCUMENTOS FISCAIS");
+
+    DrawTableRow(ref y, RowHlabel,
+        ["TIPO DOCUMENTO", "DESCRIÇÃO", "NÚMERO", "DATA EMISSÃO", "VALOR"],
+        [80, 160, 120, 100, 100], fontSize: 5);
+    DrawTableRow(ref y, RowH,
+        [data.TpDoc, data.DescOutros, data.NDoc,
+         string.IsNullOrEmpty(data.DEmi) ? "" : FormatDate(data.DEmi), data.VDocFisc],
+        [80, 160, 120, 100, 100]);
+
+    // ── VALORES DO SERVIÇO ───────────────────────────────────────────────
+    y -= 4;
+    DrawSectionTitle(ref y, "VALORES DO SERVIÇO");
+
+    DrawTableRow(ref y, RowHlabel,
+        ["VALOR TOTAL DO SERVIÇO", "VALOR A RECEBER"],
+        [280, 280], fontSize: 5);
+    DrawTableRow(ref y, RowH,
+        [data.VTPrest, data.VRec],
+        [280, 280]);
+
+    // ── IMPOSTOS ─────────────────────────────────────────────────────────
+    y -= 4;
+    DrawSectionTitle(ref y, "IMPOSTOS");
+
+    DrawTableRow(ref y, RowHlabel,
+        ["CST ICMS", "SIMPLES NACIONAL"],
+        [280, 280], fontSize: 5);
+    string indSNDesc = data.IndSN == "1" ? "1 - Sim" : "0 - Não";
+    DrawTableRow(ref y, RowH,
+        [data.Cst, indSNDesc],
+        [280, 280]);
+
+    // ── TRANSPORTE RODOVIÁRIO (se aplicável) ─────────────────────────────
+    if (!string.IsNullOrEmpty(data.Rntrc))
+    {
+        y -= 4;
+        DrawSectionTitle(ref y, "TRANSPORTE RODOVIÁRIO");
+
+        DrawTableRow(ref y, RowHlabel,
+            ["RNTRC"],
+            [560], fontSize: 5);
+        DrawTableRow(ref y, RowH,
+            [data.Rntrc],
+            [560]);
+    }
+
+    // ── OBSERVAÇÕES / INFORMAÇÕES COMPLEMENTARES ─────────────────────────
+    y -= 4;
+    DrawSectionTitle(ref y, "OBSERVAÇÕES / INFORMAÇÕES COMPLEMENTARES");
+
+    string obs = !string.IsNullOrEmpty(data.XObs) ? data.XObs
+        : !string.IsNullOrEmpty(data.XEmi) ? data.XEmi
+        : data.NatOp;
+
+    DrawTableRow(ref y, RowH * 3,
+        [obs],
+        [560], fontSize: 6, align: PdfCanvas.TextAlign.Left);
+
+    // ── Rodapé ──────────────────────────────────────────────────────────
+    y -= 4;
+    DrawTableRow(ref y, RowH,
+        [$"N° {data.NCt}", $"SÉRIE {data.Serie}", "FOLHA 1/1",
+         "Documento gerado em ambiente de homologação - Sem valor fiscal"],
+        [70, 70, 80, 340], fontSize: 6);
+
+    pdf.Save(outputPath);
+}
+
+/// <summary>
+/// Builds the 44-digit CTe access key from the extracted fields.
+/// Format: cUF(2) + AAMM(4) + CNPJ(14) + mod(2) + serie(3) + nCT(9) + tpEmis(1) + cCT(8) + cDV(1)
+/// </summary>
+static string BuildCTeChave(CTeData data)
+{
+    string cuf = (data.CUf ?? "").PadLeft(2, '0')[..Math.Min((data.CUf ?? "").Length, 2)];
+    if (cuf.Length < 2) cuf = cuf.PadLeft(2, '0');
+
+    string aamm = "";
+    if (!string.IsNullOrEmpty(data.DhEmi) && data.DhEmi.Length >= 7)
+        aamm = data.DhEmi[2..4] + data.DhEmi[5..7];
+
+    string cnpj = (data.EmitCnpj ?? "").Replace(".", "").Replace("/", "").Replace("-", "");
+    cnpj = cnpj.PadLeft(14, '0')[..14];
+
+    string mod = (data.Mod ?? "").PadLeft(2, '0')[..2];
+    string serie = (data.Serie ?? "").PadLeft(3, '0')[..3];
+    string nct = (data.NCt ?? "").PadLeft(9, '0')[..9];
+    string tpEmis = (data.TpEmis ?? "").PadLeft(1, '0')[..1];
+    string cct = (data.CCT ?? "").PadLeft(8, '0')[..8];
+    string cdv = (data.CDv ?? "").PadLeft(1, '0')[..1];
+
+    return cuf + aamm + cnpj + mod + serie + nct + tpEmis + cct + cdv;
 }
